@@ -30,11 +30,11 @@ async function handleLogin() {
     <form @submit.prevent="handleLogin">
       <div>
         <label for="username">Usuario</label>
-        <input id="username" v-model="username" autocomplete="username" required />
+        <input id="username" v-model="username" autocomplete="username" />
       </div>
       <div>
         <label for="password">Contraseña</label>
-        <input id="password" type="password" v-model="password" autocomplete="current-password" required />
+        <input id="password" type="password" v-model="password" autocomplete="current-password" />
       </div>
       <button type="submit" :disabled="loading">Entrar</button>
       <div v-if="errorMessage" class="error">{{ errorMessage }}</div>

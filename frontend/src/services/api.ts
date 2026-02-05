@@ -220,6 +220,17 @@ class ApiService {
   }
 
   /**
+   * Valida la IP del cliente contra el backend.
+   * El backend obtiene automáticamente la IP local desde REMOTE_ADDR.
+   */
+  async validateInstituteIP(): Promise<{ allowed: boolean; client_ip?: string; message?: string }> {
+    return this.post<{ allowed: boolean; client_ip?: string; message?: string }>(
+      '/auth/validate-institute-ip/',
+      {}
+    );
+  }
+
+  /**
    * Cierra sesión.
    */
   logout(): void {

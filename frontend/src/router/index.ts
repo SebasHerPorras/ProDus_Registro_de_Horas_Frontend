@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import LoginView from "../views/LoginView.vue";
 import HomeView from "../views/HomeView.vue";
+import RegistroHorasView from "../views/RegistroHorasView.vue";
 import BlockedView from "../views/BlockedView.vue";
 import api from "../services/api";
 
@@ -17,10 +18,16 @@ const router = createRouter({
       name: "home",
       component: HomeView,
     },
+
     {
       path: "/blocked",
       name: "blocked",
       component: BlockedView,
+    },
+    {
+      path: "/registro-horas",
+      name: "registro-horas",
+      component: RegistroHorasView,
     },
   ],
 });

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 interface Task {
   id: number
@@ -7,6 +9,10 @@ interface Task {
   hours: number
   completed: boolean
 }
+
+const router = useRouter()
+const ipValidationResult = ref<string | null>(null)
+const loadingIP = ref(false)
 
 const tasks = ref<Task[]>([
   { id: 1, title: 'Desarrollo de API REST', hours: 8, completed: false },
@@ -45,6 +51,29 @@ const toggleTask = (id: number) => {
 
 const deleteTask = (id: number) => {
   tasks.value = tasks.value.filter(t => t.id !== id)
+}
+
+const handleRegistroHorasClick = async () => {
+  loadingIP.value = true
+  ipValidationResult.value = null
+  try {
+    // El backend obtiene automáticamente la IP local del cliente (REMOTE_ADDR)
+    const result = await api.validateInstituteIP()
+    console.log('Resultado validación IP:', result)
+    
+    ipValidationResult.value = result.allowed
+      ? `✓ Acceso permitido desde ${result.client_ip}`
+      : `✗ Acceso denegado - Tu IP (${result.client_ip}) no está autorizada`
+    
+    if (result.allowed) {
+      router.push('/registro-horas')
+    }
+  } catch (e) {
+    console.error('Error al validar IP:', e)
+    ipValidationResult.value = 'Error al conectar con el servidor'
+  } finally {
+    loadingIP.value = false
+  }
 }
 </script>
 
@@ -117,6 +146,14 @@ const deleteTask = (id: number) => {
           </div>
         </div>
       </transition-group>
+    </section>
+    
+    <section class="registro-horas-section">
+      <h2>Acceso a Registro</h2>
+      <button class="registro-horas-link" @click="handleRegistroHorasClick" :disabled="loadingIP">
+        Ir a la página de Registro de Horas
+      </button>
+      <div v-if="ipValidationResult" class="ip-validation-result">{{ ipValidationResult }}</div>
     </section>
   </div>
 </template>
@@ -369,6 +406,53 @@ const deleteTask = (id: number) => {
 
 .list-move {
   transition: transform 0.3s ease;
+}
+
+.registro-horas-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.registro-horas-section h2 {
+  margin-top: 0;
+  color: #2d3748;
+  font-size: 1.5rem;
+}
+
+.registro-horas-link {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #38a169 0%, #48bb78 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 1rem;
+}
+
+.registro-horas-link:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(56, 161, 105, 0.4);
+}
+
+.registro-horas-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ip-validation-result {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  background: #e2e8f0;
+  color: #2d3748;
 }
 
 @media (max-width: 768px) {
