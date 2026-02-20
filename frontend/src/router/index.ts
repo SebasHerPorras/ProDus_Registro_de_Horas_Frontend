@@ -35,7 +35,7 @@ const router = createRouter({
 const IP_CHECK_KEY = "ip_check_cache";
 const IP_CHECK_TTL_MS = 5 * 60 * 1000;
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to: any) => {
   if (import.meta.env.MODE === "development") {
     return true;
   }
@@ -43,7 +43,7 @@ router.beforeEach(async (to) => {
   if (to.name === "blocked") {
     const cached = sessionStorage.getItem(IP_CHECK_KEY);
     if (cached) {
-      const { allowed, dev_mode, ts } = JSON.parse(cached) as {
+      const { allowed, dev_mode } = JSON.parse(cached) as {
         allowed: boolean;
         dev_mode: boolean;
         ts: number;
