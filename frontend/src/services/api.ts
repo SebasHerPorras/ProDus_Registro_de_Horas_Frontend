@@ -231,9 +231,29 @@ class ApiService {
   }
 
   /**
-   * Cierra sesión.
+   * Cierra sesión llamando al backend.
    */
-  logout(): void {
+  async logout(): Promise<void> {
+    try {
+      await this.request<{ detail: string }>(
+        '/auth/logout/',
+        {
+          method: 'POST',
+        },
+        true // Incluir token de autenticación
+      );
+    } catch (e) {
+      console.warn('Error al cerrar sesión en backend:', e);
+      // Proseguir con logout local incluso si el backend falla
+    } finally {
+      this.clearAuthData();
+    }
+  }
+
+  /**
+   * Limpia los datos de autenticación de forma sincrónica.
+   */
+  logoutSync(): void {
     this.clearAuthData();
   }
 
