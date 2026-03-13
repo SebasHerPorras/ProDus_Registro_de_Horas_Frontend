@@ -6,8 +6,18 @@ import api from '@/services/api'
 interface DecodedToken {
   user_id: number
   username: string
-  role: UserRole
+  role?: string
   exp: number
+}
+
+const normalizeRole = (rawRole: string | null | undefined): UserRole => {
+  const value = (rawRole || '').toString().trim().toLowerCase()
+
+  if (value === 'admin' || value === 'administrador') return 'admin'
+  if (value === 'coordinador' || value === 'coordinator') return 'coordinador'
+  if (value === 'asistente' || value === 'assistant') return 'asistente'
+
+  return 'asistente'
 }
 
 export const useAuth = () => {
@@ -56,7 +66,14 @@ export const useAuth = () => {
       isAuthenticated.value = true
       userId.value = decoded.user_id
       userName.value = decoded.username
-      userRole.value = decoded.role
+
+      const storedUser = api.getUser()
+      if (storedUser) {
+        userName.value = storedUser.full_name || storedUser.username
+        userRole.value = normalizeRole(storedUser.role)
+      } else {
+        userRole.value = normalizeRole(decoded.role)
+      }
     } catch (e) {
       console.error('Error al cargar usuario:', e)
       error.value = 'Error al cargar el perfil del usuario'

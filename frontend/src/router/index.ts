@@ -3,7 +3,6 @@ import LoginView from "../views/LoginView.vue";
 import HomeView from "../views/HomeView.vue";
 import RegistroHorasView from "../views/RegistroHorasView.vue";
 import BlockedView from "../views/BlockedView.vue";
-import api from "../services/api";
 
 // Función para verificar si el usuario tiene un token válido
 const isUserAuthenticated = (): boolean => {
@@ -63,75 +62,17 @@ const router = createRouter({
   ],
 });
 
-const IP_CHECK_KEY = "ip_check_cache";
-const IP_CHECK_TTL_MS = 5 * 60 * 1000;
-
 // Guard para verificar autenticación
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to) => {
   const isAuthenticated = isUserAuthenticated();
   const requiresAuth = to.meta.requiresAuth;
 
   if (requiresAuth && !isAuthenticated) {
-    // Redirigir a login si la ruta requiere autenticación pero no hay token
-    next({ name: 'login' });
-  } else if ((to.name === 'login' || to.name === 'login-page' || to.path === '/') && isAuthenticated) {
-    // Redirigir a home si ya está autenticado e intenta ir a login
-    next({ name: 'home' });
-  } else {
-    next();
-  }
-});
-
-// Guard para verificar IP (solo en producción)
-router.beforeEach(async (to: any) => {
-  if (import.meta.env.MODE === "development") {
-    return true;
+    return { name: 'login' };
   }
 
-  if (to.name === "blocked") {
-    const cached = sessionStorage.getItem(IP_CHECK_KEY);
-    if (cached) {
-      const { allowed, dev_mode } = JSON.parse(cached) as {
-        allowed: boolean;
-        dev_mode: boolean;
-        ts: number;
-      };
-      if (allowed || dev_mode) {
-        return { path: "/" };
-      }
-    }
-    return true;
-  }
-
-  const cached = sessionStorage.getItem(IP_CHECK_KEY);
-  if (cached) {
-    const { allowed, dev_mode, ts } = JSON.parse(cached) as {
-      allowed: boolean;
-      dev_mode: boolean;
-      ts: number;
-    };
-    if (dev_mode || allowed) {
-      if (dev_mode) return true;
-      if (Date.now() - ts < IP_CHECK_TTL_MS) return true;
-    }
-  }
-
-  try {
-    const result = await api.checkIP();
-    sessionStorage.setItem(
-      IP_CHECK_KEY,
-      JSON.stringify({
-        allowed: result.allowed,
-        dev_mode: result.dev_mode,
-        ts: Date.now(),
-      })
-    );
-
-    if (!result.allowed && !result.dev_mode) {
-      return { path: "/blocked" };
-    }
-  } catch {
-    return { path: "/blocked" };
+  if ((to.name === 'login' || to.name === 'login-page' || to.path === '/') && isAuthenticated) {
+    return { name: 'home' };
   }
 
   return true;

@@ -11,13 +11,15 @@ interface LoginCredentials {
 }
 
 interface AuthTokens {
+  ok?: boolean;
   access: string;
   refresh: string;
   user: {
     id: number;
+    full_name: string;
     username: string;
+    is_active: boolean;
     is_admin: boolean;
-    name?: string;
     role?: string;
   };
 }
@@ -261,7 +263,8 @@ class ApiService {
    * Obtiene el perfil del usuario actual.
    */
   async getProfile(): Promise<AuthTokens['user']> {
-    return this.request<AuthTokens['user']>('/users/me/');
+    const response = await this.request<{ ok: boolean; user: AuthTokens['user'] }>('/users/me/');
+    return response.user;
   }
 
   // ============================================

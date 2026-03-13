@@ -76,6 +76,8 @@ const handleLogout = async () => {
         :subtitle="`Acceso rápido a tus herramientas de ${getRoleLabel().toLowerCase()}`"
       />
 
+      <p class="current-role">Rol actual: <strong>{{ getRoleLabel() }}</strong></p>
+
       <!-- Grid de opciones según rol -->
       <section class="menu-grid">
         <h3 class="section-title">Acciones Disponibles</h3>
@@ -132,6 +134,12 @@ const handleLogout = async () => {
 
 .menu-grid {
   margin-bottom: 3rem;
+}
+
+.current-role {
+  margin: 0.75rem 0 1.5rem;
+  color: #003d7a;
+  font-size: 0.95rem;
 }
 
 .section-title {

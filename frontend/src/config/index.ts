@@ -14,7 +14,7 @@ interface AppConfig {
 
 const config: AppConfig = {
   // URL base de la API
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
   
   // Ambiente actual
   appEnv: import.meta.env.VITE_APP_ENV || 'development',
