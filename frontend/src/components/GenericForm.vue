@@ -209,15 +209,15 @@ const onCancel = () => {
 <style scoped>
 .generic-form-container {
   margin-bottom: 3rem;
-  background: #ffffff;
+  background: var(--color-surface);
   border-radius: 12px;
   padding: 1.25rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-gray-200);
 }
 
 .form-title {
   font-size: 1.25rem;
-  color: #003d7a;
+  color: var(--color-primary-dark);
   margin-bottom: 1rem;
   font-weight: 700;
 }
@@ -260,28 +260,28 @@ const onCancel = () => {
 .field-label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text);
   margin-bottom: 0.35rem;
 }
 
 .required-indicator {
-  color: #dc2626;
+  color: var(--color-error-dark);
   margin-left: 0.2rem;
 }
 
 .field-input {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-form-input-border);
   border-radius: 8px;
   padding: 0.65rem 0.75rem;
   font-size: 0.9rem;
-  color: #1e293b;
-  background: #ffffff;
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 .field-input:focus {
   outline: none;
-  border-color: #0052a3;
-  box-shadow: 0 0 0 3px rgba(0, 82, 163, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus-primary);
 }
 
 .field-textarea {
@@ -293,12 +293,12 @@ const onCancel = () => {
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.2rem;
-  color: #334155;
+  color: var(--color-text);
 }
 
 .field-error {
   margin-top: 0.35rem;
-  color: #dc2626;
+  color: var(--color-error-dark);
   font-size: 0.8rem;
 }
 

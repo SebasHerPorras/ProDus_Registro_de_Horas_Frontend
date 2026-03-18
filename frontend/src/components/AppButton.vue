@@ -31,8 +31,8 @@ withDefaults(
 
 /* Variantes */
 .btn-primary {
-  background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: var(--color-surface);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -41,19 +41,19 @@ withDefaults(
 }
 
 .btn-secondary {
-  background: white;
-  color: #003d7a;
-  border: 2px solid #e0e0e0;
+  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  border: 2px solid var(--color-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: #0052a3;
-  background: #f8f9fa;
+  border-color: var(--color-primary);
+  background: var(--color-gray-50);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
+  color: var(--color-surface);
 }
 
 .btn-success:hover:not(:disabled) {
@@ -62,8 +62,8 @@ withDefaults(
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error-dark) 100%);
+  color: var(--color-surface);
 }
 
 .btn-danger:hover:not(:disabled) {
