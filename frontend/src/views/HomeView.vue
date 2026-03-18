@@ -9,12 +9,15 @@ import MenuButton from '@/components/MenuButton.vue'
 import InfoCard from '@/components/InfoCard.vue'
 import GenericDataList from '@/components/GenericDataList.vue'
 import GenericForm from '@/components/GenericForm.vue'
+import AppButton from '@/components/AppButton.vue'
+import ScheduleBuilder from '@/components/ScheduleBuilder.vue'
 import { assistantFormFields } from '@/forms/assistantForm.schema'
 
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
 const showAssistantsManager = ref(false)
 const showAssistantForm = ref(false)
+const showScheduleBuilder = ref(false)
 
 const assistantColumns = [
   { key: 'name', label: 'Usuario' },
@@ -101,6 +104,12 @@ const onConfirmAssistantForm = () => {
 const onCancelAssistantForm = () => {
   showAssistantForm.value = false
 }
+
+const toggleScheduleBuilder = () => {
+  showScheduleBuilder.value = !showScheduleBuilder.value
+  var blocks = localStorage.getItem("schedule_builder_blocks")
+  console.log("Blocks in localStorage:", blocks)
+}
 </script>
 
 <template>
@@ -180,6 +189,18 @@ const onCancelAssistantForm = () => {
           <InfoCard label="Asistentes a Cargo" value="0" />
           <InfoCard label="Reportes Pendientes" value="0" />
         </div>
+
+        <div class="schedule-preview-action">
+          <AppButton variant="secondary" @click="toggleScheduleBuilder">
+            {{ showScheduleBuilder ? 'Ocultar formulario de horario' : 'Ver formulario de horario' }}
+          </AppButton>
+        </div>
+
+        <ScheduleBuilder
+          v-if="showScheduleBuilder"
+          heading="Horario inicial para asistente"
+          subheading="Vista previa local del formulario (sin enlazar backend)."
+        />
       </section>
 
       <section class="info-section" v-if="userRole === 'admin'">
@@ -237,6 +258,11 @@ const onCancelAssistantForm = () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
+}
+
+.schedule-preview-action {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 @media (max-width: 768px) {

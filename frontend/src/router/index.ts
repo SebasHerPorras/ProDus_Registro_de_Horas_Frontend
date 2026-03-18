@@ -3,6 +3,7 @@ import LoginView from "../views/LoginView.vue";
 import HomeView from "../views/HomeView.vue";
 import RegistroHorasView from "../views/RegistroHorasView.vue";
 import BlockedView from "../views/BlockedView.vue";
+import HorariosView from "../views/HorariosView.vue";
 
 // Función para verificar si el usuario tiene un token válido
 const isUserAuthenticated = (): boolean => {
@@ -57,6 +58,12 @@ const router = createRouter({
       path: "/registro-horas",
       name: "registro-horas",
       component: RegistroHorasView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/horarios",
+      name: "horarios",
+      component: HorariosView,
       meta: { requiresAuth: true },
     },
   ],
