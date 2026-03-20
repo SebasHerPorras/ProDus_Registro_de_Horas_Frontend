@@ -36,6 +36,52 @@ interface ApiError {
   [key: string]: unknown;
 }
 
+// ============================================
+// CAMPOS DE USUARIO
+// ============================================
+interface CreateAssistantPayload {
+  username: string;
+  full_name: string;
+  password: string;
+  password_confirm: string;
+  is_active?: boolean;
+  start_date: string;
+  end_date?: string | null;
+  weekly_hours: number;
+}
+
+interface CreateAssistantResponse {
+  ok: boolean;
+  user: {
+    id: number;
+    full_name: string;
+    username: string;
+    is_active: boolean;
+    is_admin: boolean;
+    role?: string;
+  };
+  assistant: {
+    user_id: number;
+    start_date: string;
+    end_date: string | null;
+    weekly_hours: number;
+  };
+}
+
+interface AssistantListItem {
+  id: number;
+  username: string;
+  full_name: string;
+  is_active: boolean;
+}
+
+interface ListAssistantsResponse {
+  ok: boolean;
+  results: AssistantListItem[];
+}
+
+
+
 // Storage keys
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -68,7 +114,7 @@ class ApiService {
   /**
    * Obtiene el usuario actual del localStorage.
    */
-  getUser(): AuthTokens['user'] | null {
+  getUser(): AuthTokens["user"] | null {
     const user = localStorage.getItem(USER_KEY);
     return user ? JSON.parse(user) : null;
   }
@@ -103,13 +149,13 @@ class ApiService {
    */
   private getHeaders(includeAuth: boolean = true): HeadersInit {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     if (includeAuth) {
       const token = this.getAccessToken();
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
       }
     }
 
@@ -122,10 +168,10 @@ class ApiService {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    includeAuth: boolean = true
+    includeAuth: boolean = true,
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -143,14 +189,16 @@ class ApiService {
       } else {
         // No se pudo refrescar, limpiar auth y redirigir
         this.clearAuthData();
-        window.location.href = '/';
-        throw new Error('Sesión expirada');
+        window.location.href = "/";
+        throw new Error("Sesión expirada");
       }
     }
 
     if (!response.ok) {
       const error: ApiError = await response.json().catch(() => ({}));
-      throw new Error(error.detail || error.message || `Error ${response.status}`);
+      throw new Error(
+        error.detail || error.message || `Error ${response.status}`,
+      );
     }
 
     // Si la respuesta está vacía (204 No Content)
@@ -170,8 +218,8 @@ class ApiService {
 
     try {
       const response = await fetch(`${this.baseUrl}/auth/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: refreshToken }),
       });
 
@@ -197,12 +245,12 @@ class ApiService {
    */
   async login(credentials: LoginCredentials): Promise<AuthTokens> {
     const data = await this.request<AuthTokens>(
-      '/auth/login/',
+      "/auth/login/",
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(credentials),
       },
-      false // No incluir auth header en login
+      false, // No incluir auth header en login
     );
     this.setAuthData(data);
     return data;
@@ -213,11 +261,11 @@ class ApiService {
    */
   async checkIP(): Promise<CheckIPResponse> {
     return this.request<CheckIPResponse>(
-      '/auth/check-ip/',
+      "/auth/check-ip/",
       {
-        method: 'GET',
+        method: "GET",
       },
-      false
+      false,
     );
   }
 
@@ -225,11 +273,16 @@ class ApiService {
    * Valida la IP del cliente contra el backend.
    * El backend obtiene automáticamente la IP local desde REMOTE_ADDR.
    */
-  async validateInstituteIP(): Promise<{ allowed: boolean; client_ip?: string; message?: string }> {
-    return this.post<{ allowed: boolean; client_ip?: string; message?: string }>(
-      '/auth/validate-institute-ip/',
-      {}
-    );
+  async validateInstituteIP(): Promise<{
+    allowed: boolean;
+    client_ip?: string;
+    message?: string;
+  }> {
+    return this.post<{
+      allowed: boolean;
+      client_ip?: string;
+      message?: string;
+    }>("/auth/validate-institute-ip/", {});
   }
 
   /**
@@ -238,14 +291,14 @@ class ApiService {
   async logout(): Promise<void> {
     try {
       await this.request<{ detail: string }>(
-        '/auth/logout/',
+        "/auth/logout/",
         {
-          method: 'POST',
+          method: "POST",
         },
-        true // Incluir token de autenticación
+        true, // Incluir token de autenticación
       );
     } catch (e) {
-      console.warn('Error al cerrar sesión en backend:', e);
+      console.warn("Error al cerrar sesión en backend:", e);
       // Proseguir con logout local incluso si el backend falla
     } finally {
       this.clearAuthData();
@@ -262,9 +315,29 @@ class ApiService {
   /**
    * Obtiene el perfil del usuario actual.
    */
-  async getProfile(): Promise<AuthTokens['user']> {
-    const response = await this.request<{ ok: boolean; user: AuthTokens['user'] }>('/users/me/');
+  async getProfile(): Promise<AuthTokens["user"]> {
+    const response = await this.request<{
+      ok: boolean;
+      user: AuthTokens["user"];
+    }>("/users/me/");
     return response.user;
+  }
+
+  // ============================================
+  // USERS ENDPOINTS
+  // ============================================
+  async createAssistant(
+    payload: CreateAssistantPayload,
+  ): Promise<CreateAssistantResponse> {
+    return this.request<CreateAssistantResponse>("/assistants/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // lista de asistentes
+  async listAssistants(): Promise<ListAssistantsResponse> {
+    return this.request<ListAssistantsResponse>("/assistants/list/");
   }
 
   // ============================================
@@ -280,12 +353,13 @@ class ApiService {
     status?: string;
   }): Promise<unknown[]> {
     const searchParams = new URLSearchParams();
-    if (params?.start_date) searchParams.append('start_date', params.start_date);
-    if (params?.end_date) searchParams.append('end_date', params.end_date);
-    if (params?.status) searchParams.append('status', params.status);
-    
+    if (params?.start_date)
+      searchParams.append("start_date", params.start_date);
+    if (params?.end_date) searchParams.append("end_date", params.end_date);
+    if (params?.status) searchParams.append("status", params.status);
+
     const query = searchParams.toString();
-    return this.request<unknown[]>(`/reports/${query ? `?${query}` : ''}`);
+    return this.request<unknown[]>(`/reports/${query ? `?${query}` : ""}`);
   }
 
   /**
@@ -298,8 +372,8 @@ class ApiService {
     date: string;
     notes?: string;
   }): Promise<unknown> {
-    return this.request('/reports/', {
-      method: 'POST',
+    return this.request("/reports/", {
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
@@ -312,11 +386,12 @@ class ApiService {
     end_date?: string;
   }): Promise<unknown> {
     const searchParams = new URLSearchParams();
-    if (params?.start_date) searchParams.append('start_date', params.start_date);
-    if (params?.end_date) searchParams.append('end_date', params.end_date);
-    
+    if (params?.start_date)
+      searchParams.append("start_date", params.start_date);
+    if (params?.end_date) searchParams.append("end_date", params.end_date);
+
     const query = searchParams.toString();
-    return this.request(`/reports/my_summary/${query ? `?${query}` : ''}`);
+    return this.request(`/reports/my_summary/${query ? `?${query}` : ""}`);
   }
 
   // ============================================
@@ -327,7 +402,7 @@ class ApiService {
    * Obtiene las actividades disponibles.
    */
   async getActivities(): Promise<unknown[]> {
-    return this.request<unknown[]>('/activities/');
+    return this.request<unknown[]>("/activities/");
   }
 
   // ============================================
@@ -338,7 +413,7 @@ class ApiService {
    * Obtiene el horario del usuario.
    */
   async getMySchedule(): Promise<unknown> {
-    return this.request('/schedules/');
+    return this.request("/schedules/");
   }
 
   // ============================================
@@ -357,7 +432,7 @@ class ApiService {
    */
   async post<T>(endpoint: string, data: unknown): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
@@ -367,7 +442,7 @@ class ApiService {
    */
   async put<T>(endpoint: string, data: unknown): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
@@ -377,7 +452,7 @@ class ApiService {
    */
   async patch<T>(endpoint: string, data: unknown): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }
@@ -387,7 +462,7 @@ class ApiService {
    */
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 }
