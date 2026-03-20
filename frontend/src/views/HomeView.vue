@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { ROLES } from '@/config/roles'
@@ -7,33 +7,9 @@ import AppHeader from '@/components/AppHeader.vue'
 import WelcomeBanner from '@/components/WelcomeBanner.vue'
 import MenuButton from '@/components/MenuButton.vue'
 import InfoCard from '@/components/InfoCard.vue'
-import GenericDataList from '@/components/GenericDataList.vue'
-import GenericForm from '@/components/GenericForm.vue'
-import { assistantFormFields } from '@/forms/assistantForm.schema'
 
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
-const showAssistantsManager = ref(false)
-const showAssistantForm = ref(false)
-
-const assistantColumns = [
-  { key: 'name', label: 'Usuario' },
-  { key: 'role', label: 'Rol' },
-  { key: 'status', label: 'Estado' }
-]
-
-const assistantActions = [
-  { key: 'edit', label: 'Editar' },
-  { key: 'delete', label: 'Eliminar', disabledField: 'canDelete' }
-]
-
-const usersPreview = [
-  { id: 1, name: 'Ana Torres', role: 'Asistente', status: 'Activo', canDelete: false },
-  { id: 2, name: 'Luis Mendoza', role: 'Asistente', status: 'Activo', canDelete: false },
-  { id: 3, name: 'Carla Ríos', role: 'Coordinador', status: 'Activo', canDelete: false },
-  { id: 4, name: 'Pedro Salas', role: 'Asistente', status: 'Inactivo', canDelete: false },
-  { id: 5, name: 'María Vega', role: 'Admin', status: 'Activo', canDelete: false }
-]
 
 // Opciones de menú según el rol
 const menuOptions = computed(() => {
@@ -79,28 +55,6 @@ const handleLogout = async () => {
   await logout()
   router.push('/login')
 }
-
-const toggleAssistantsManager = () => {
-  showAssistantsManager.value = !showAssistantsManager.value
-  if (!showAssistantsManager.value) {
-    showAssistantForm.value = false
-  }
-}
-
-const onAddAssistant = () => {
-  showAssistantForm.value = true
-}
-
-const onAssistantAction = () => {
-}
-
-const onConfirmAssistantForm = () => {
-  showAssistantForm.value = false
-}
-
-const onCancelAssistantForm = () => {
-  showAssistantForm.value = false
-}
 </script>
 
 <template>
@@ -139,33 +93,11 @@ const onCancelAssistantForm = () => {
             v-if="userRole === 'coordinador'"
             icon="🧑‍🤝‍🧑"
             label="Gestionar Asistentes"
-            @click="toggleAssistantsManager"
+            @click="navigateTo('/gestionar-asistentes')"
           />
         </div>
       </section>
 
-      <GenericDataList
-        v-if="userRole === 'coordinador' && showAssistantsManager"
-        title="Gestión de Asistentes"
-        :columns="assistantColumns"
-        :items="usersPreview"
-        :actions="assistantActions"
-        add-button-label="Añadir uno nuevo"
-        @add="onAddAssistant"
-        @action="onAssistantAction"
-      />
-
-      <GenericForm
-        v-if="userRole === 'coordinador' && showAssistantsManager && showAssistantForm"
-        title="Nuevo Asistente"
-        :fields="assistantFormFields"
-        confirm-text="Confirmar"
-        cancel-text="Cancelar"
-        @confirm="onConfirmAssistantForm"
-        @cancel="onCancelAssistantForm"
-      />
-
-      <!-- Información según rol -->
       <section class="info-section" v-if="userRole === 'asistente'">
         <h3 class="section-title">Tu Información</h3>
         <div class="info-cards">
