@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import GenericDataList from '@/components/GenericDataList.vue'
 import GenericForm from '@/components/GenericForm.vue'
 import { assistantFormFields } from '@/forms/assistantForm.schema'
 import { useAuth } from '@/composables/useAuth'
+import api from '@/services/api'
 
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
@@ -22,13 +23,31 @@ const assistantActions = [
   { key: 'delete', label: 'Eliminar', disabledField: 'canDelete' }
 ]
 
-const assistants = [
-  { id: 1, name: 'Ana Torres', role: 'Asistente', status: 'Activo', canDelete: false },
-  { id: 2, name: 'Luis Mendoza', role: 'Asistente', status: 'Activo', canDelete: false },
-  { id: 3, name: 'Carla Ríos', role: 'Coordinador', status: 'Activo', canDelete: false },
-  { id: 4, name: 'Pedro Salas', role: 'Asistente', status: 'Inactivo', canDelete: false },
-  { id: 5, name: 'María Vega', role: 'Admin', status: 'Activo', canDelete: false }
-]
+interface AssistantRow {
+  id: number
+  username: string
+  name: string
+  role: string
+  status: string
+  canDelete: boolean
+}
+
+const assistants = ref<AssistantRow[]>([])
+
+const loadAssistants = async () => {
+  try {
+    const response = await api.listAssistants()
+    assistants.value = response.results.map((item) => ({
+      id: item.id,
+      username: item.username,
+      name: item.full_name,
+      role: 'Asistente',
+      status: item.is_active ? 'Activo' : 'Inactivo',
+      canDelete: false,
+    }))
+  } catch (error) {
+  }
+}
 
 const handleLogout = async () => {
   await logout()
@@ -44,10 +63,25 @@ const onAssistantAction = (payload: { actionKey: string; item: Record<string, un
   // TODO: Implementar lógica de editar/eliminar
 }
 
-const onConfirmAssistantForm = (formData: any) => {
-  console.log('Nuevo asistente:', formData)
-  showAssistantForm.value = false
-  // TODO: Enviar al backend
+const onConfirmAssistantForm = async (formData: Record<string, unknown>) => {
+  try {
+    const payload = {
+      username: String(formData.username || '').trim(),
+      full_name: String(formData.full_name || '').trim(),
+      password: String(formData.password || ''),
+      password_confirm: String(formData.password_confirm || ''),
+      is_active: Boolean(formData.is_active),
+      start_date: String(formData.start_date || ''),
+      end_date: formData.end_date ? String(formData.end_date) : null,
+      weekly_hours: Number(formData.weekly_hours),
+    }
+    await api.createAssistant(payload)
+
+    showAssistantForm.value = false
+    await loadAssistants()
+  } catch (error) {
+    alert(error instanceof Error ? error.message : 'No se pudo crear el asistente')
+  }
 }
 
 const onCancelAssistantForm = () => {
@@ -57,6 +91,10 @@ const onCancelAssistantForm = () => {
 const goBack = () => {
   router.back()
 }
+
+onMounted(() => {
+  loadAssistants()
+})
 </script>
 
 <template>
