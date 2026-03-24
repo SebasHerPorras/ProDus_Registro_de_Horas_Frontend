@@ -2,8 +2,10 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import AppButton from '@/components/AppButton.vue'
 import GenericDataList from '@/components/GenericDataList.vue'
 import GenericForm from '@/components/GenericForm.vue'
+import ScheduleBuilder from '@/components/ScheduleBuilder.vue'
 import { assistantFormFields } from '@/forms/assistantForm.schema'
 import { useAuth } from '@/composables/useAuth'
 import api from '@/services/api'
@@ -11,6 +13,12 @@ import api from '@/services/api'
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
 const showAssistantForm = ref(false)
+const showScheduleModal = ref(false)
+const scheduleValidationError = ref('')
+const scheduleModalError = ref('')
+const isScheduleConfirmed = ref(false)
+const ASSISTANT_SCHEDULE_STORAGE_KEY = 'assistant_create_schedule_blocks'
+const ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY = 'assistant_create_schedule_draft_blocks'
 
 const assistantColumns = [
   { key: 'name', label: 'Usuario' },
@@ -34,6 +42,18 @@ interface AssistantRow {
 
 const assistants = ref<AssistantRow[]>([])
 
+const getScheduleBlocks = (storageKey: string): unknown[] => {
+  const rawValue = localStorage.getItem(storageKey)
+  if (!rawValue) return []
+
+  try {
+    const parsed = JSON.parse(rawValue)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 const loadAssistants = async () => {
   try {
     const response = await api.listAssistants()
@@ -55,7 +75,57 @@ const handleLogout = async () => {
 }
 
 const onAddAssistant = () => {
+  localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
+  localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+  showScheduleModal.value = false
+  scheduleValidationError.value = ''
+  scheduleModalError.value = ''
+  isScheduleConfirmed.value = false
   showAssistantForm.value = true
+}
+
+const onOpenScheduleModal = () => {
+  scheduleModalError.value = ''
+
+  const currentBlocks = localStorage.getItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
+  if (currentBlocks) {
+    localStorage.setItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY, currentBlocks)
+  } else {
+    localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+  }
+
+  showScheduleModal.value = true
+}
+
+const onCancelScheduleModal = () => {
+  const draftBlocks = getScheduleBlocks(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+
+  if (!draftBlocks.length) {
+    localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
+    isScheduleConfirmed.value = false
+    scheduleValidationError.value = 'Hace falta el horario.'
+  }
+
+  localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+  scheduleModalError.value = ''
+  showScheduleModal.value = false
+}
+
+const onConfirmScheduleModal = () => {
+  const draftBlocks = getScheduleBlocks(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+
+  if (!draftBlocks.length) {
+    scheduleModalError.value = 'Debes agregar al menos un bloque de horario.'
+    return
+  }
+
+  localStorage.setItem(ASSISTANT_SCHEDULE_STORAGE_KEY, JSON.stringify(draftBlocks))
+  localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+
+  isScheduleConfirmed.value = true
+  scheduleValidationError.value = ''
+  scheduleModalError.value = ''
+  showScheduleModal.value = false
 }
 
 const onAssistantAction = (payload: { actionKey: string; item: Record<string, unknown> }) => {
@@ -64,6 +134,12 @@ const onAssistantAction = (payload: { actionKey: string; item: Record<string, un
 }
 
 const onConfirmAssistantForm = async (formData: Record<string, unknown>) => {
+  const scheduleBlocks = getScheduleBlocks(ASSISTANT_SCHEDULE_STORAGE_KEY)
+  if (!isScheduleConfirmed.value || !scheduleBlocks.length) {
+    scheduleValidationError.value = 'Debes confirmar un horario inicial antes de crear el asistente.'
+    return
+  }
+
   try {
     const payload = {
       username: String(formData.username || '').trim(),
@@ -77,6 +153,12 @@ const onConfirmAssistantForm = async (formData: Record<string, unknown>) => {
     }
     await api.createAssistant(payload)
 
+    localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
+    localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+    scheduleValidationError.value = ''
+    scheduleModalError.value = ''
+    isScheduleConfirmed.value = false
+    showScheduleModal.value = false
     showAssistantForm.value = false
     await loadAssistants()
   } catch (error) {
@@ -85,6 +167,12 @@ const onConfirmAssistantForm = async (formData: Record<string, unknown>) => {
 }
 
 const onCancelAssistantForm = () => {
+  localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
+  localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
+  scheduleValidationError.value = ''
+  scheduleModalError.value = ''
+  isScheduleConfirmed.value = false
+  showScheduleModal.value = false
   showAssistantForm.value = false
 }
 
@@ -130,7 +218,41 @@ onMounted(() => {
         cancel-text="Cancelar"
         @confirm="onConfirmAssistantForm"
         @cancel="onCancelAssistantForm"
-      />
+      >
+        <template #extra>
+          <div class="schedule-action-row">
+            <AppButton variant="secondary" size="md" @click="onOpenScheduleModal">
+              Configurar horario inicial
+            </AppButton>
+            <p class="schedule-status" :class="{ confirmed: isScheduleConfirmed }">
+              {{ isScheduleConfirmed ? 'Horario confirmado' : 'Horario pendiente por confirmar' }}
+            </p>
+            <p v-if="scheduleValidationError" class="schedule-error">{{ scheduleValidationError }}</p>
+          </div>
+        </template>
+      </GenericForm>
+
+      <div v-if="showScheduleModal" class="schedule-modal-overlay">
+        <div class="schedule-modal-card">
+          <ScheduleBuilder
+            :storage-key="ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY"
+            heading="Horario inicial"
+            subheading="Cuando termines, confirma para guardar este horario en el asistente."
+          />
+
+          <p v-if="scheduleModalError" class="schedule-error">{{ scheduleModalError }}</p>
+
+          <div class="schedule-modal-actions">
+            <AppButton variant="secondary" size="md" @click="onCancelScheduleModal">
+              Cancelar
+            </AppButton>
+            <AppButton variant="primary" size="md" @click="onConfirmScheduleModal">
+              Confirmar horario
+            </AppButton>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -161,5 +283,58 @@ onMounted(() => {
 
 .back-button:hover {
   background-color: #d0d0d0;
+}
+
+.schedule-action-row {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.schedule-status {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.schedule-status.confirmed {
+  color: var(--color-success-dark);
+  font-weight: 600;
+}
+
+.schedule-error {
+  margin: 0;
+  color: var(--color-error-dark);
+  font-weight: 600;
+}
+
+.schedule-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-text) 35%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.schedule-modal-card {
+  width: min(960px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.schedule-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 </style>
