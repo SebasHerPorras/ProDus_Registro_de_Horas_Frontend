@@ -24,21 +24,21 @@ defineEmits<{
   justify-content: center;
   gap: 1rem;
   padding: 2rem;
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: var(--menu-button-bg);
+  border: 2px solid var(--menu-button-border);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
   font-size: 1rem;
   font-weight: 500;
-  color: #333;
+  color: var(--menu-button-text);
 }
 
 .menu-option:hover {
-  border-color: #0052a3;
-  background: #f8f9fa;
+  border-color: var(--menu-button-border-hover);
+  background: var(--menu-button-bg-hover);
   transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 82, 163, 0.15);
+  box-shadow: var(--menu-button-hover-shadow);
 }
 
 .menu-option:active {
@@ -51,7 +51,7 @@ defineEmits<{
 
 .menu-label {
   text-align: center;
-  color: #003d7a;
+  color: var(--menu-button-label);
   font-weight: 600;
 }
 </style>
