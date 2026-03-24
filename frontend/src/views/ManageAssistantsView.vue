@@ -6,6 +6,7 @@ import AppButton from '@/components/AppButton.vue'
 import GenericDataList from '@/components/GenericDataList.vue'
 import GenericForm from '@/components/GenericForm.vue'
 import ScheduleBuilder from '@/components/ScheduleBuilder.vue'
+import ErrorModal from '@/components/ErrorModal.vue'
 import { assistantFormFields } from '@/forms/assistantForm.schema'
 import { useAuth } from '@/composables/useAuth'
 import api from '@/services/api'
@@ -13,6 +14,8 @@ import api from '@/services/api'
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
 const showAssistantForm = ref(false)
+const showErrorModal = ref(false)
+const errorMessages = ref<string[]>([])
 const showScheduleModal = ref(false)
 const scheduleValidationError = ref('')
 const scheduleModalError = ref('')
@@ -133,26 +136,41 @@ const onAssistantAction = (payload: { actionKey: string; item: Record<string, un
   // TODO: Implementar lógica de editar/eliminar
 }
 
-const onConfirmAssistantForm = async (formData: Record<string, unknown>) => {
-  const scheduleBlocks = getScheduleBlocks(ASSISTANT_SCHEDULE_STORAGE_KEY)
-  if (!isScheduleConfirmed.value || !scheduleBlocks.length) {
-    scheduleValidationError.value = 'Debes confirmar un horario inicial antes de crear el asistente.'
+const onConfirmAssistantForm = async (formData: Record<string, any>) => {
+  if (!isScheduleConfirmed.value) {
+    scheduleValidationError.value = 'Debes configurar y confirmar el horario inicial antes de guardar.'
     return
   }
 
+  // Extraemos lo guardado en LocalStorage
+  const confirmedBlocks = getScheduleBlocks(ASSISTANT_SCHEDULE_STORAGE_KEY) as Array<{
+    day_of_week: string,
+    start_time: string,
+    end_time: string
+  }>
+
   try {
     const payload = {
-      username: String(formData.username || '').trim(),
-      full_name: String(formData.full_name || '').trim(),
-      password: String(formData.password || ''),
-      password_confirm: String(formData.password_confirm || ''),
-      is_active: Boolean(formData.is_active),
-      start_date: String(formData.start_date || ''),
-      end_date: formData.end_date ? String(formData.end_date) : null,
-      weekly_hours: Number(formData.weekly_hours),
-    }
-    await api.createAssistant(payload)
+      username: formData.username as string,
+      full_name: formData.full_name as string, 
+      password: formData.password as string | undefined,
+      password_confirm: formData.password_confirm as string | undefined, 
+      start_date: formData.start_date ? new Date(formData.start_date as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      end_date: formData.end_date ? new Date(formData.end_date as string).toISOString().split('T')[0] : null,
+      weekly_hours: Number(formData.weekly_hours), 
+      is_active: formData.is_active ?? true, 
+      
+      // Adjuntar los horarios sin work_minutes
+      schedule_blocks: confirmedBlocks.map(block => ({
+         day_of_week: block.day_of_week,
+         start_time: block.start_time,
+         end_time: block.end_time
+      }))
+    } as any
 
+    await api.createAssistant(payload)
+    
+    // Si funciona, limpiamos todo y cerramos
     localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
     localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
     scheduleValidationError.value = ''
@@ -162,7 +180,21 @@ const onConfirmAssistantForm = async (formData: Record<string, unknown>) => {
     showAssistantForm.value = false
     await loadAssistants()
   } catch (error) {
-    alert(error instanceof Error ? error.message : 'No se pudo crear el asistente')
+    if (error instanceof Error) {
+      try {
+        const parsedMsgs = JSON.parse(error.message)
+        if (Array.isArray(parsedMsgs)) {
+          errorMessages.value = parsedMsgs
+        } else {
+          errorMessages.value = [error.message]
+        }
+      } catch {
+        errorMessages.value = [error.message]
+      }
+    } else {
+      errorMessages.value = ['Ocurrió un error desconocido al procesar la solicitud.']
+    }
+    showErrorModal.value = true
   }
 }
 
@@ -255,6 +287,13 @@ onMounted(() => {
 
     </div>
   </div>
+
+  <!-- Modal de errores de backend -->
+  <ErrorModal 
+    :show="showErrorModal" 
+    :messages="errorMessages"
+    @close="showErrorModal = false"
+  />
 </template>
 
 <style scoped>
