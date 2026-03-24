@@ -30,24 +30,24 @@ interface CheckIPResponse {
   client_ip?: string;
 }
 
-interface ApiError {
-  detail?: string;
-  message?: string;
-  [key: string]: unknown;
-}
-
 // ============================================
-// CAMPOS DE USUARIO
+// CAMPOS DE USUARIO y HORARIO
 // ============================================
 interface CreateAssistantPayload {
   username: string;
   full_name: string;
-  password: string;
-  password_confirm: string;
-  is_active?: boolean;
+  password?: string;
+  password_confirm?: string;
   start_date: string;
   end_date?: string | null;
   weekly_hours: number;
+  is_active?: boolean;
+  // Añadir esto nuevo:
+  schedule_blocks: Array<{
+    day_of_week: string;
+    start_time: string;
+    end_time: string;
+  }>;
 }
 
 interface CreateAssistantResponse {
@@ -195,9 +195,27 @@ class ApiService {
     }
 
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({}));
+      const errorData = await response.json().catch(() => ({}));
+      
+      // Si el backend envió diccionario de errores (ej. validaciones de formulario)
+      if (typeof errorData === 'object' && !errorData.detail && !errorData.message) {
+        // Extraemos los mensajes de las llaves del objeto JSON
+        const allMessages: string[] = [];
+        for (const key in errorData) {
+          if (Array.isArray(errorData[key])) {
+            allMessages.push(...errorData[key]);
+          } else if (typeof errorData[key] === 'string') {
+            allMessages.push(errorData[key]);
+          }
+        }
+        
+        if (allMessages.length > 0) {
+          throw new Error(JSON.stringify(allMessages));
+        }
+      }
+
       throw new Error(
-        error.detail || error.message || `Error ${response.status}`,
+        errorData.detail || errorData.message || `Error ${response.status}`,
       );
     }
 
