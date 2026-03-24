@@ -7,13 +7,10 @@ import AppHeader from '@/components/AppHeader.vue'
 import WelcomeBanner from '@/components/WelcomeBanner.vue'
 import MenuButton from '@/components/MenuButton.vue'
 import InfoCard from '@/components/InfoCard.vue'
-import AppButton from '@/components/AppButton.vue'
-import ScheduleBuilder from '@/components/ScheduleBuilder.vue'
 import api from '@/services/api'
 
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
-const showScheduleBuilder = ref(false)
 const assistantsCount = ref(0)
 
 const loadAssistants = async () => {
@@ -42,27 +39,27 @@ watch(
 // Opciones de menú según el rol
 const menuOptions = computed(() => {
   const commonOptions = [
-    { label: 'Registro de Horas', path: '/registro-horas', icon: '⏱️' }
+    { label: 'Registro de Horas', path: '/registro-horas' }
   ]
 
   const roleMenus = {
     asistente: [
       ...commonOptions,
-      { label: 'Mis Horarios', path: '/horarios', icon: '📅' },
-      { label: 'Mis Reportes', path: '/reportes', icon: '📊' }
+      { label: 'Mis Horarios', path: '/horarios' },
+      { label: 'Mis Reportes', path: '/reportes' }
     ],
     coordinador: [
       ...commonOptions,
-      { label: 'Gestionar Equipo', path: '/equipo', icon: '👥' },
-      { label: 'Reportes del Proyecto', path: '/reportes-proyecto', icon: '📊' },
-      { label: 'Horarios Equipo', path: '/horarios-equipo', icon: '📆' }
+      { label: 'Gestionar Equipo', path: '/equipo' },
+      { label: 'Reportes del Proyecto', path: '/reportes-proyecto' },
+      { label: 'Horarios Equipo', path: '/horarios-equipo' }
     ],
     admin: [
       ...commonOptions,
-      { label: 'Gestionar Usuarios', path: '/usuarios', icon: '👨‍💼' },
-      { label: 'Configuración Sistema', path: '/configuracion', icon: '⚙️' },
-      { label: 'Reportes Globales', path: '/reportes-globales', icon: '📈' },
-      { label: 'Rangos IP Permitidos', path: '/rangos-ip', icon: '🔒' }
+      { label: 'Gestionar Usuarios', path: '/usuarios' },
+      { label: 'Configuración Sistema', path: '/configuracion' },
+      { label: 'Reportes Globales', path: '/reportes-globales' },
+      { label: 'Rangos IP Permitidos', path: '/rangos-ip' }
     ]
   }
 
@@ -77,10 +74,6 @@ const getRoleLabel = (): string => {
 
 const navigateTo = (path: string) => {
   router.push(path)
-}
-
-const toggleScheduleBuilder = () => {
-  showScheduleBuilder.value = !showScheduleBuilder.value
 }
 
 const handleLogout = async () => {
@@ -117,13 +110,11 @@ const handleLogout = async () => {
           <MenuButton 
             v-for="option in menuOptions" 
             :key="option.path"
-            :icon="option.icon"
             :label="option.label"
             @click="navigateTo(option.path)"
           />
           <MenuButton
             v-if="userRole === 'coordinador'"
-            icon="🧑‍🤝‍🧑"
             label="Gestionar Asistentes"
             @click="navigateTo('/gestionar-asistentes')"
           />
@@ -144,18 +135,6 @@ const handleLogout = async () => {
           <InfoCard label="Asistentes a Cargo" :value="String(assistantsCount)" />
           <InfoCard label="Reportes Pendientes" value="0" />
         </div>
-
-        <div class="schedule-preview-action">
-          <AppButton variant="secondary" @click="toggleScheduleBuilder">
-            {{ showScheduleBuilder ? 'Ocultar formulario de horario' : 'Ver formulario de horario' }}
-          </AppButton>
-        </div>
-
-        <ScheduleBuilder
-          v-if="showScheduleBuilder"
-          heading="Horario inicial para asistente"
-          subheading="Vista previa local del formulario (sin enlazar backend)."
-        />
       </section>
 
       <section class="info-section" v-if="userRole === 'admin'">
@@ -213,11 +192,6 @@ const handleLogout = async () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
-}
-
-.schedule-preview-action {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
 }
 
 @media (max-width: 768px) {
