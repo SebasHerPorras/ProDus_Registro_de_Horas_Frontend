@@ -234,6 +234,10 @@ const getPasswordInputType = (fieldName: string): string => {
       </div>
     </div>
 
+    <div class="form-extra">
+      <slot name="extra" />
+    </div>
+
     <div class="form-actions">
       <AppButton variant="secondary" size="md" @click="onCancel">
         {{ cancelText }}
@@ -270,6 +274,10 @@ const getPasswordInputType = (fieldName: string): string => {
 .form-field {
   display: flex;
   flex-direction: column;
+}
+
+.form-extra {
+  margin-top: 1rem;
 }
 
 .field-span-1 {
