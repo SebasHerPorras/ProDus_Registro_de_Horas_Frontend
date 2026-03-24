@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { ROLES } from '@/config/roles'
@@ -82,34 +82,6 @@ const handleLogout = async () => {
   await logout()
   router.push('/login')
 }
-
-const toggleAssistantsManager = () => {
-  showAssistantsManager.value = !showAssistantsManager.value
-  if (!showAssistantsManager.value) {
-    showAssistantForm.value = false
-  }
-}
-
-const onAddAssistant = () => {
-  showAssistantForm.value = true
-}
-
-const onAssistantAction = () => {
-}
-
-const onConfirmAssistantForm = () => {
-  showAssistantForm.value = false
-}
-
-const onCancelAssistantForm = () => {
-  showAssistantForm.value = false
-}
-
-const toggleScheduleBuilder = () => {
-  showScheduleBuilder.value = !showScheduleBuilder.value
-  var blocks = localStorage.getItem("schedule_builder_blocks")
-  console.log("Blocks in localStorage:", blocks)
-}
 </script>
 
 <template>
@@ -148,33 +120,11 @@ const toggleScheduleBuilder = () => {
             v-if="userRole === 'coordinador'"
             icon="🧑‍🤝‍🧑"
             label="Gestionar Asistentes"
-            @click="toggleAssistantsManager"
+            @click="navigateTo('/gestionar-asistentes')"
           />
         </div>
       </section>
 
-      <GenericDataList
-        v-if="userRole === 'coordinador' && showAssistantsManager"
-        title="Gestión de Asistentes"
-        :columns="assistantColumns"
-        :items="usersPreview"
-        :actions="assistantActions"
-        add-button-label="Añadir uno nuevo"
-        @add="onAddAssistant"
-        @action="onAssistantAction"
-      />
-
-      <GenericForm
-        v-if="userRole === 'coordinador' && showAssistantsManager && showAssistantForm"
-        title="Nuevo Asistente"
-        :fields="assistantFormFields"
-        confirm-text="Confirmar"
-        cancel-text="Cancelar"
-        @confirm="onConfirmAssistantForm"
-        @cancel="onCancelAssistantForm"
-      />
-
-      <!-- Información según rol -->
       <section class="info-section" v-if="userRole === 'asistente'">
         <h3 class="section-title">Tu Información</h3>
         <div class="info-cards">

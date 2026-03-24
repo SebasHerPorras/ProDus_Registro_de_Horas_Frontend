@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
 
 interface GenericFormOption {
@@ -40,6 +40,7 @@ const emit = defineEmits<{
 
 const formData = reactive<Record<string, any>>({})
 const errors = reactive<Record<string, string>>({})
+const visiblePasswords = ref<Set<string>>(new Set())
 
 const sortedFields = computed(() => {
   return [...props.fields].sort((firstField, secondField) => {
@@ -115,6 +116,13 @@ const validateForm = (): boolean => {
     }
   })
 
+  // Validación especial: comparar password y password_confirm
+  if (formData['password'] && formData['password_confirm']) {
+    if (formData['password'] !== formData['password_confirm']) {
+      errors['password_confirm'] = 'Las contraseñas no coinciden'
+    }
+  }
+
   return Object.keys(errors).length === 0
 }
 
@@ -126,6 +134,18 @@ const onSubmit = () => {
 const onCancel = () => {
   initializeForm()
   emit('cancel')
+}
+
+const togglePasswordVisibility = (fieldName: string) => {
+  if (visiblePasswords.value.has(fieldName)) {
+    visiblePasswords.value.delete(fieldName)
+  } else {
+    visiblePasswords.value.add(fieldName)
+  }
+}
+
+const getPasswordInputType = (fieldName: string): string => {
+  return visiblePasswords.value.has(fieldName) ? 'text' : 'password'
 }
 </script>
 
@@ -170,6 +190,25 @@ const onCancel = () => {
             {{ option.label }}
           </option>
         </select>
+
+        <div v-else-if="field.type === 'password'" class="password-field-wrapper">
+          <input
+            :id="field.name"
+            v-model="formData[field.name]"
+            class="field-input"
+            :type="getPasswordInputType(field.name)"
+            :placeholder="field.placeholder || ''"
+            :disabled="field.disabled"
+          />
+          <button
+            type="button"
+            class="password-toggle-btn"
+            @click="togglePasswordVisibility(field.name)"
+            :aria-label="visiblePasswords.has(field.name) ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          >
+            {{ visiblePasswords.has(field.name) ? '👁️' : '👁️‍🗨️' }}
+          </button>
+        </div>
 
         <label v-else-if="field.type === 'checkbox'" class="checkbox-wrapper">
           <input
@@ -276,6 +315,39 @@ const onCancel = () => {
   font-size: 0.9rem;
   color: var(--color-text);
   background: var(--color-surface);
+}
+password-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.password-toggle-btn:hover {
+  opacity: 0.7;
+}
+
+.password-toggle-btn:focus {
+  outline: none;
+}
+
+.password-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .field-input:focus {
