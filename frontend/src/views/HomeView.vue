@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { ROLES } from '@/config/roles'
@@ -7,36 +7,37 @@ import AppHeader from '@/components/AppHeader.vue'
 import WelcomeBanner from '@/components/WelcomeBanner.vue'
 import MenuButton from '@/components/MenuButton.vue'
 import InfoCard from '@/components/InfoCard.vue'
-import GenericDataList from '@/components/GenericDataList.vue'
-import GenericForm from '@/components/GenericForm.vue'
 import AppButton from '@/components/AppButton.vue'
 import ScheduleBuilder from '@/components/ScheduleBuilder.vue'
-import { assistantFormFields } from '@/forms/assistantForm.schema'
+import api from '@/services/api'
 
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
-const showAssistantsManager = ref(false)
-const showAssistantForm = ref(false)
 const showScheduleBuilder = ref(false)
+const assistantsCount = ref(0)
 
-const assistantColumns = [
-  { key: 'name', label: 'Usuario' },
-  { key: 'role', label: 'Rol' },
-  { key: 'status', label: 'Estado' }
-]
+const loadAssistants = async () => {
+  try {
+    const response = await api.listAssistants()
+    assistantsCount.value = response.results.length
+  } catch (error) {
+    assistantsCount.value = 0
+    console.warn('No se pudo cargar la lista de asistentes:', error)
+  }
+}
 
-const assistantActions = [
-  { key: 'edit', label: 'Editar' },
-  { key: 'delete', label: 'Eliminar', disabledField: 'canDelete' }
-]
+watch(
+  () => userRole.value,
+  (role) => {
+    if (role === 'coordinador' || role === 'admin') {
+      loadAssistants()
+      return
+    }
 
-const usersPreview = [
-  { id: 1, name: 'Ana Torres', role: 'Asistente', status: 'Activo', canDelete: false },
-  { id: 2, name: 'Luis Mendoza', role: 'Asistente', status: 'Activo', canDelete: false },
-  { id: 3, name: 'Carla Ríos', role: 'Coordinador', status: 'Activo', canDelete: false },
-  { id: 4, name: 'Pedro Salas', role: 'Asistente', status: 'Inactivo', canDelete: false },
-  { id: 5, name: 'María Vega', role: 'Admin', status: 'Activo', canDelete: false }
-]
+    assistantsCount.value = 0
+  },
+  { immediate: true }
+)
 
 // Opciones de menú según el rol
 const menuOptions = computed(() => {
@@ -76,6 +77,10 @@ const getRoleLabel = (): string => {
 
 const navigateTo = (path: string) => {
   router.push(path)
+}
+
+const toggleScheduleBuilder = () => {
+  showScheduleBuilder.value = !showScheduleBuilder.value
 }
 
 const handleLogout = async () => {
@@ -136,7 +141,7 @@ const handleLogout = async () => {
       <section class="info-section" v-if="userRole === 'coordinador'">
         <h3 class="section-title">Información del Coordinador</h3>
         <div class="info-cards">
-          <InfoCard label="Asistentes a Cargo" value="0" />
+          <InfoCard label="Asistentes a Cargo" :value="String(assistantsCount)" />
           <InfoCard label="Reportes Pendientes" value="0" />
         </div>
 
