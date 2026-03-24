@@ -7,6 +7,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import WelcomeBanner from '@/components/WelcomeBanner.vue'
 import MenuButton from '@/components/MenuButton.vue'
 import InfoCard from '@/components/InfoCard.vue'
+import WorkSessionWidget from '@/components/WorkSessionWidget.vue'
 import api from '@/services/api'
 
 const router = useRouter()
@@ -100,6 +101,9 @@ const handleLogout = async () => {
         :title="`Bienvenido, ${userName || 'Usuario'}`"
         :subtitle="`Acceso rápido a tus herramientas de ${getRoleLabel().toLowerCase()}`"
       />
+
+      <!-- Widget de Jornada Laboral (Solo asistentes) -->
+      <WorkSessionWidget v-if="userRole === 'asistente'" />
 
       <!-- Grid de opciones según rol -->
       <section class="menu-grid">

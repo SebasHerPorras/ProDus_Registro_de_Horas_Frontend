@@ -483,6 +483,31 @@ class ApiService {
       method: "DELETE",
     });
   }
+
+  // ============================================
+  // WORK SESSION
+  // ============================================
+  
+  /**
+   * Obtiene el estado actual de la jornada laboral
+   */
+  async getWorkSessionState(): Promise<{ ok: boolean; session: any }> {
+    return this.request<{ ok: boolean; session: any }>('/schedules/work-session/current/');
+  }
+
+  /**
+   * Inicia la jornada laboral
+   */
+  async startWorkSession(): Promise<{ ok: boolean; session: any }> {
+    return this.post<{ ok: boolean; session: any }>('/schedules/work-session/start/', {});
+  }
+
+  /**
+   * Finaliza la jornada laboral
+   */
+  async endWorkSession(): Promise<{ ok: boolean; session: any }> {
+    return this.post<{ ok: boolean; session: any }>('/schedules/work-session/end/', {});
+  }
 }
 
 // Exportar instancia única (singleton)
