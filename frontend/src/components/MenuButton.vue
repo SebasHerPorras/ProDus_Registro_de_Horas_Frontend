@@ -1,13 +1,13 @@
 <template>
   <button class="menu-option" @click="$emit('click')">
-    <span class="menu-icon">{{ icon }}</span>
+    <span v-if="icon" class="menu-icon">{{ icon }}</span>
     <span class="menu-label">{{ label }}</span>
   </button>
 </template>
 
 <script setup lang="ts">
 defineProps<{
-  icon: string
+  icon?: string
   label: string
 }>()
 

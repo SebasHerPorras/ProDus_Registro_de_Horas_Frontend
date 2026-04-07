@@ -1,10 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
-import type { RouteMeta } from "vue-router";
 import LoginView from "../views/LoginView.vue";
 import HomeView from "../views/HomeView.vue";
 import RegistroHorasView from "../views/RegistroHorasView.vue";
 import BlockedView from "../views/BlockedView.vue";
-import HorariosView from "../views/HorariosView.vue";
 import ManageAssistantsView from "../views/ManageAssistantsView.vue";
 
 // Extender tipo de RouteMeta para agregar requiredRoles
