@@ -1,4 +1,4 @@
-import { ref, watch, onBeforeUnmount } from 'vue';
+import { ref } from 'vue';
 import { api } from '@/services/api';
 
 const isActive = ref(false);
@@ -6,6 +6,8 @@ const startTime = ref<Date | null>(null);
 const elapsedTime = ref<string>('00:00:00');
 const isLoading = ref(false);
 const errorMessage = ref<string | null>(null);
+const elapsedSecondsAtSync = ref(0);
+const localSyncTimestamp = ref<number | null>(null);
 
 let timerInterval: number | null = null;
 
@@ -23,10 +25,11 @@ const formatTime = (ms: number): string => {
 };
 
 const updateTimer = () => {
-  if (startTime.value && isActive.value) {
-    const diff = Date.now() - startTime.value.getTime();
-    elapsedTime.value = formatTime(diff);
-  }
+  if (!isActive.value || localSyncTimestamp.value === null) return;
+
+  const secondsSinceSync = Math.floor((Date.now() - localSyncTimestamp.value) / 1000);
+  const totalSeconds = Math.max(0, elapsedSecondsAtSync.value + secondsSinceSync);
+  elapsedTime.value = formatTime(totalSeconds * 1000);
 };
 
 const clearTimer = () => {
@@ -34,6 +37,15 @@ const clearTimer = () => {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+};
+
+const resetSessionState = () => {
+  isActive.value = false;
+  startTime.value = null;
+  elapsedSecondsAtSync.value = 0;
+  localSyncTimestamp.value = null;
+  elapsedTime.value = '00:00:00';
+  clearTimer();
 };
 
 const startTimer = () => {
@@ -47,35 +59,37 @@ export function useWorkSession() {
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      // Mocked endpoint behavior based on the backend API (or current API structure)
-      // Ajustar dependiendo de cómo devuelva la data real
       const response = await api.getWorkSessionState();
       
-      if (response && response.session && response.session.status === 'IN_PROGRESS') {
+      if (response?.active_session && response.session) {
         isActive.value = true;
         startTime.value = new Date(response.session.check_in);
+        elapsedSecondsAtSync.value = response.elapsed_seconds ?? response.session.elapsed_seconds ?? 0;
+        localSyncTimestamp.value = Date.now();
         startTimer();
       } else {
-        isActive.value = false;
-        startTime.value = null;
-        elapsedTime.value = '00:00:00';
-        clearTimer();
+        resetSessionState();
       }
     } catch (error: any) {
-      if (error && error.status !== 404) {
+      const isExpectedForbidden =
+        error?.status === 403 ||
+        String(error?.message || '').includes('No eres un asistente registrado en el sistema');
+
+      if (!isExpectedForbidden) {
         console.error('Error fetching work session state:', error);
       }
-      // If 404, there is no active session, which is fine.
-      isActive.value = false;
-      startTime.value = null;
-      elapsedTime.value = '00:00:00';
-      clearTimer();
+
+      resetSessionState();
     } finally {
       isLoading.value = false;
     }
   };
 
   const startSession = async () => {
+    if (isActive.value) {
+      return;
+    }
+
     isLoading.value = true;
     errorMessage.value = null;
     try {
@@ -83,26 +97,29 @@ export function useWorkSession() {
       if (response && response.session) {
         isActive.value = true;
         startTime.value = new Date(response.session.check_in);
+        elapsedSecondsAtSync.value = response.session.elapsed_seconds ?? 0;
+        localSyncTimestamp.value = Date.now();
         startTimer();
       }
     } catch (error: any) {
-      errorMessage.value = error?.message || 'No puedes iniciar jornada desde esta red.';
+      errorMessage.value = error?.message || 'No fue posible iniciar la jornada.';
     } finally {
       isLoading.value = false;
     }
   };
 
-  const endSession = async () => {
+  const closeSession = async () => {
+    if (!isActive.value) {
+      return;
+    }
+
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      await api.endWorkSession();
-      isActive.value = false;
-      startTime.value = null;
-      elapsedTime.value = '00:00:00';
-      clearTimer();
+      await api.closeWorkSession();
+      resetSessionState();
     } catch (error: any) {
-      errorMessage.value = error?.message || 'Hubo un error al finalizar la jornada.';
+      errorMessage.value = error?.message || 'No fue posible finalizar la jornada.';
     } finally {
       isLoading.value = false;
     }
@@ -119,6 +136,6 @@ export function useWorkSession() {
     errorMessage,
     fetchSessionState,
     startSession,
-    endSession,
+    closeSession,
   };
 }

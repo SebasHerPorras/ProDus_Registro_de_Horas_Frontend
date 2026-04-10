@@ -12,17 +12,29 @@ const {
   errorMessage,
   fetchSessionState,
   startSession,
-  endSession
+  closeSession,
 } = useWorkSession();
 
 const isConfirmModalOpen = ref(false);
+const confirmAction = ref<'start' | 'close'>('start');
 
-const openConfirmModal = () => {
+const openStartConfirmModal = () => {
+  confirmAction.value = 'start';
+  isConfirmModalOpen.value = true;
+};
+
+const openCloseConfirmModal = () => {
+  confirmAction.value = 'close';
   isConfirmModalOpen.value = true;
 };
 
 const handleConfirm = async () => {
-  await startSession();
+  if (confirmAction.value === 'start') {
+    await startSession();
+  } else {
+    await closeSession();
+  }
+
   isConfirmModalOpen.value = false;
 };
 
@@ -37,6 +49,24 @@ onMounted(() => {
 const formattedStartTime = computed(() => {
   if (!startTime.value) return '--:-- --';
   return startTime.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+});
+
+const confirmTitle = computed(() => {
+  return confirmAction.value === 'start'
+    ? '¿Iniciar Jornada?'
+    : '¿Finalizar Jornada?';
+});
+
+const confirmMessage = computed(() => {
+  return confirmAction.value === 'start'
+    ? '¿Deseas iniciar tu jornada laboral ahora? Se registrará la hora actual como el momento de inicio.'
+    : '¿Estás seguro de que quieres finalizar la jornada actual?';
+});
+
+const confirmText = computed(() => {
+  return confirmAction.value === 'start'
+    ? 'Iniciar Jornada'
+    : 'Finalizar Jornada';
 });
 </script>
 
@@ -69,7 +99,7 @@ const formattedStartTime = computed(() => {
 
         <AppButton 
           variant="secondary" 
-          @click="endSession"
+          @click="openCloseConfirmModal"
           :loading="isLoading"
           :disabled="isLoading"
           class="action-button end-button"
@@ -83,9 +113,9 @@ const formattedStartTime = computed(() => {
 
         <AppButton 
           variant="primary" 
-          @click="openConfirmModal"
+          @click="openStartConfirmModal"
           :loading="isLoading"
-          :disabled="isLoading"
+          :disabled="isLoading || isActive"
           class="action-button start-button"
         >
           Iniciar jornada
@@ -96,9 +126,9 @@ const formattedStartTime = computed(() => {
     <!-- Confirm Modal -->
     <ConfirmModal 
       :is-open="isConfirmModalOpen"
-      title="¿Iniciar Jornada?"
-      message="¿Deseas iniciar tu jornada laboral ahora? Se registrará la hora actual como el momento de inicio."
-      confirm-text="Iniciar Jornada"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-text="confirmText"
       cancel-text="Cancelar"
       :is-loading="isLoading"
       @confirm="handleConfirm"

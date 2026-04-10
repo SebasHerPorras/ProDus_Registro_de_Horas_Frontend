@@ -98,7 +98,7 @@ const handleLogout = async () => {
     <div class="main-content">
       <!-- Banner de bienvenida -->
       <WelcomeBanner 
-        :title="`Bienvenido, ${userName || 'Usuario'}`"
+        :title="`Bienvenid@, ${userName || 'Usuario'}`"
         :subtitle="`Acceso rápido a tus herramientas de ${getRoleLabel().toLowerCase()}`"
       />
 

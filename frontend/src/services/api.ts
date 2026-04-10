@@ -80,6 +80,36 @@ interface ListAssistantsResponse {
   results: AssistantListItem[];
 }
 
+interface WorkSessionData {
+  id: number;
+  check_in: string;
+  check_out: string | null;
+  status_code: string;
+  work_description: string;
+  break_minutes: number;
+  elapsed_seconds: number;
+  is_active: boolean;
+}
+
+interface WorkSessionStateResponse {
+  ok: boolean;
+  active_session: boolean;
+  session: WorkSessionData | null;
+  server_now: string;
+  elapsed_seconds?: number;
+}
+
+interface WorkSessionStartResponse {
+  ok: boolean;
+  session: WorkSessionData;
+}
+
+interface WorkSessionCloseResponse {
+  ok: boolean;
+  closed_session: WorkSessionData;
+  server_now: string;
+}
+
 
 
 // Storage keys
@@ -235,7 +265,7 @@ class ApiService {
     if (!refreshToken) return false;
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/refresh/`, {
+      const response = await fetch(`${this.baseUrl}/users/auth/refresh/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: refreshToken }),
@@ -263,7 +293,7 @@ class ApiService {
    */
   async login(credentials: LoginCredentials): Promise<AuthTokens> {
     const data = await this.request<AuthTokens>(
-      "/auth/login/",
+      "/users/auth/login/",
       {
         method: "POST",
         body: JSON.stringify(credentials),
@@ -279,7 +309,7 @@ class ApiService {
    */
   async checkIP(): Promise<CheckIPResponse> {
     return this.request<CheckIPResponse>(
-      "/auth/check-ip/",
+      "/users/auth/validate-institute-ip/",
       {
         method: "GET",
       },
@@ -300,7 +330,7 @@ class ApiService {
       allowed: boolean;
       client_ip?: string;
       message?: string;
-    }>("/auth/validate-institute-ip/", {});
+    }>("/users/auth/validate-institute-ip/", {});
   }
 
   /**
@@ -309,7 +339,7 @@ class ApiService {
   async logout(): Promise<void> {
     try {
       await this.request<{ detail: string }>(
-        "/auth/logout/",
+        "/users/auth/logout/",
         {
           method: "POST",
         },
@@ -337,7 +367,7 @@ class ApiService {
     const response = await this.request<{
       ok: boolean;
       user: AuthTokens["user"];
-    }>("/users/me/");
+    }>("/users/auth/me/");
     return response.user;
   }
 
@@ -347,7 +377,7 @@ class ApiService {
   async createAssistant(
     payload: CreateAssistantPayload,
   ): Promise<CreateAssistantResponse> {
-    return this.request<CreateAssistantResponse>("/assistants/", {
+    return this.request<CreateAssistantResponse>("/users/assistants/", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -355,7 +385,7 @@ class ApiService {
 
   // lista de asistentes
   async listAssistants(): Promise<ListAssistantsResponse> {
-    return this.request<ListAssistantsResponse>("/assistants/list/");
+    return this.request<ListAssistantsResponse>("/users/assistants/list/");
   }
 
   // ============================================
@@ -491,22 +521,22 @@ class ApiService {
   /**
    * Obtiene el estado actual de la jornada laboral
    */
-  async getWorkSessionState(): Promise<{ ok: boolean; session: any }> {
-    return this.request<{ ok: boolean; session: any }>('/schedules/work-session/current/');
+  async getWorkSessionState(): Promise<WorkSessionStateResponse> {
+    return this.request<WorkSessionStateResponse>('/timelogs/work-session/current/');
   }
 
   /**
    * Inicia la jornada laboral
    */
-  async startWorkSession(): Promise<{ ok: boolean; session: any }> {
-    return this.post<{ ok: boolean; session: any }>('/schedules/work-session/start/', {});
+  async startWorkSession(): Promise<WorkSessionStartResponse> {
+    return this.post<WorkSessionStartResponse>('/timelogs/work-session/start/', {});
   }
 
   /**
    * Finaliza la jornada laboral
    */
-  async endWorkSession(): Promise<{ ok: boolean; session: any }> {
-    return this.post<{ ok: boolean; session: any }>('/schedules/work-session/end/', {});
+  async closeWorkSession(): Promise<WorkSessionCloseResponse> {
+    return this.post<WorkSessionCloseResponse>('/timelogs/work-session/close/', {});
   }
 }
 
