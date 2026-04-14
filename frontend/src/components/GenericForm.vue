@@ -13,6 +13,8 @@ interface GenericFormField {
   type?: string
   placeholder?: string
   required?: boolean
+  maxLength?: number
+  showCounter?: boolean
   pattern?: string
   patternMessage?: string
   options?: GenericFormOption[]
@@ -28,14 +30,17 @@ const props = withDefaults(defineProps<{
   fields: GenericFormField[]
   confirmText?: string
   cancelText?: string
+  resetOnCancel?: boolean
 }>(), {
   confirmText: 'Confirmar',
-  cancelText: 'Cancelar'
+  cancelText: 'Cancelar',
+  resetOnCancel: true,
 })
 
 const emit = defineEmits<{
   confirm: [payload: Record<string, unknown>]
   cancel: []
+  change: [payload: Record<string, unknown>]
 }>()
 
 const formData = reactive<Record<string, any>>({})
@@ -72,6 +77,14 @@ watch(
   () => props.fields,
   () => initializeForm(),
   { immediate: true, deep: true }
+)
+
+watch(
+  () => formData,
+  () => {
+    emit('change', { ...formData })
+  },
+  { deep: true, immediate: true }
 )
 
 const getFieldClasses = (field: GenericFormField): string[] => {
@@ -132,7 +145,9 @@ const onSubmit = () => {
 }
 
 const onCancel = () => {
-  initializeForm()
+  if (props.resetOnCancel) {
+    initializeForm()
+  }
   emit('cancel')
 }
 
@@ -146,6 +161,15 @@ const togglePasswordVisibility = (fieldName: string) => {
 
 const getPasswordInputType = (fieldName: string): string => {
   return visiblePasswords.value.has(fieldName) ? 'text' : 'password'
+}
+
+const getFieldCounterText = (field: GenericFormField): string => {
+  const rawValue = formData[field.name]
+  const value = typeof rawValue === 'string' ? rawValue : String(rawValue ?? '')
+  if (field.maxLength !== undefined) {
+    return `${value.length}/${field.maxLength}`
+  }
+  return `${value.length}`
 }
 </script>
 
@@ -170,6 +194,7 @@ const getPasswordInputType = (fieldName: string): string => {
           v-model="formData[field.name]"
           class="field-input field-textarea"
           :placeholder="field.placeholder || ''"
+          :maxlength="field.maxLength"
           :disabled="field.disabled"
           rows="3"
         />
@@ -227,8 +252,16 @@ const getPasswordInputType = (fieldName: string): string => {
           class="field-input"
           :type="field.type || 'text'"
           :placeholder="field.placeholder || ''"
+          :maxlength="field.maxLength"
           :disabled="field.disabled"
         />
+
+        <p
+          class="field-counter"
+          v-if="field.showCounter && (field.type === 'textarea' || field.type === 'text' || field.type === 'password')"
+        >
+          {{ getFieldCounterText(field) }}
+        </p>
 
         <p class="field-error" v-if="errors[field.name]">{{ errors[field.name] }}</p>
       </div>
@@ -324,7 +357,7 @@ const getPasswordInputType = (fieldName: string): string => {
   color: var(--color-text);
   background: var(--color-surface);
 }
-password-field-wrapper {
+.password-field-wrapper {
   position: relative;
   display: flex;
   align-items: center;
@@ -380,6 +413,13 @@ password-field-wrapper {
   margin-top: 0.35rem;
   color: var(--color-error-dark);
   font-size: 0.8rem;
+}
+
+.field-counter {
+  margin-top: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-align: right;
 }
 
 .form-actions {
