@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useWorkSession } from '@/composables/useWorkSession';
 import AppButton from '@/components/AppButton.vue';
 import ConfirmModal from '@/components/ConfirmModal.vue';
+
+const router = useRouter();
 
 const {
   isActive,
@@ -12,34 +15,34 @@ const {
   errorMessage,
   fetchSessionState,
   startSession,
-  closeSession,
 } = useWorkSession();
 
-const isConfirmModalOpen = ref(false);
+const isStartOrCloseConfirmModalOpen = ref(false);
 const confirmAction = ref<'start' | 'close'>('start');
 
 const openStartConfirmModal = () => {
   confirmAction.value = 'start';
-  isConfirmModalOpen.value = true;
+  isStartOrCloseConfirmModalOpen.value = true;
 };
 
 const openCloseConfirmModal = () => {
   confirmAction.value = 'close';
-  isConfirmModalOpen.value = true;
+  isStartOrCloseConfirmModalOpen.value = true;
 };
 
-const handleConfirm = async () => {
+const handleStartOrCloseConfirm = async () => {
   if (confirmAction.value === 'start') {
     await startSession();
-  } else {
-    await closeSession();
+    isStartOrCloseConfirmModalOpen.value = false;
+    return;
   }
 
-  isConfirmModalOpen.value = false;
+  isStartOrCloseConfirmModalOpen.value = false;
+  router.push('/jornada/cierre');
 };
 
-const handleCancel = () => {
-  isConfirmModalOpen.value = false;
+const handleStartOrCloseCancel = () => {
+  isStartOrCloseConfirmModalOpen.value = false;
 };
 
 onMounted(() => {
@@ -66,7 +69,7 @@ const confirmMessage = computed(() => {
 const confirmText = computed(() => {
   return confirmAction.value === 'start'
     ? 'Iniciar Jornada'
-    : 'Finalizar Jornada';
+    : 'Ir al formulario';
 });
 </script>
 
@@ -121,19 +124,21 @@ const confirmText = computed(() => {
           Iniciar jornada
         </AppButton>
       </div>
+
     </div>
 
-    <!-- Confirm Modal -->
+    <!-- Confirmacion inicial (iniciar o pasar a formulario de cierre) -->
     <ConfirmModal 
-      :is-open="isConfirmModalOpen"
+      :is-open="isStartOrCloseConfirmModalOpen"
       :title="confirmTitle"
       :message="confirmMessage"
       :confirm-text="confirmText"
       cancel-text="Cancelar"
       :is-loading="isLoading"
-      @confirm="handleConfirm"
-      @cancel="handleCancel"
+      @confirm="handleStartOrCloseConfirm"
+      @cancel="handleStartOrCloseCancel"
     />
+
   </div>
 </template>
 

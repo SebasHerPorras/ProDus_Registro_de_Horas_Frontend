@@ -1,6 +1,14 @@
 import { ref } from 'vue';
 import { api } from '@/services/api';
 
+export interface CloseSessionPayload {
+  project_id?: number | null;
+  manager_user_id?: number | null;
+  notes?: string;
+  activities?: string;
+  break_minutes?: number;
+}
+
 const isActive = ref(false);
 const startTime = ref<Date | null>(null);
 const elapsedTime = ref<string>('00:00:00');
@@ -108,18 +116,20 @@ export function useWorkSession() {
     }
   };
 
-  const closeSession = async () => {
+  const closeSession = async (payload: CloseSessionPayload = {}): Promise<boolean> => {
     if (!isActive.value) {
-      return;
+      return false;
     }
 
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      await api.closeWorkSession();
+      await api.closeWorkSession(payload);
       resetSessionState();
+      return true;
     } catch (error: any) {
       errorMessage.value = error?.message || 'No fue posible finalizar la jornada.';
+      return false;
     } finally {
       isLoading.value = false;
     }
