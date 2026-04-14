@@ -4,6 +4,7 @@ import HomeView from "../views/HomeView.vue";
 import RegistroHorasView from "../views/RegistroHorasView.vue";
 import BlockedView from "../views/BlockedView.vue";
 import ManageAssistantsView from "../views/ManageAssistantsView.vue";
+import WorkSessionCloseView from "../views/WorkSessionCloseView.vue";
 
 // Extender tipo de RouteMeta para agregar requiredRoles
 declare module "vue-router" {
@@ -97,6 +98,12 @@ const router = createRouter({
       component: ManageAssistantsView,
       meta: { requiresAuth: true, requiredRoles: ['coordinador', 'admin'] },
 
+    },
+    {
+      path: "/jornada/cierre",
+      name: "work-session-close",
+      component: WorkSessionCloseView,
+      meta: { requiresAuth: true, requiredRoles: ['asistente', 'assistant'] },
     },
   ],
 });
