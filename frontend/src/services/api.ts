@@ -110,6 +110,35 @@ interface WorkSessionCloseResponse {
   server_now: string;
 }
 
+interface ActiveProjectItem {
+  id: number;
+  name: string;
+}
+
+interface ActiveCoordinatorItem {
+  id: number;
+  full_name: string;
+  username: string;
+}
+
+interface ListActiveProjectsResponse {
+  ok: boolean;
+  results: ActiveProjectItem[];
+}
+
+interface ListActiveCoordinatorsResponse {
+  ok: boolean;
+  results: ActiveCoordinatorItem[];
+}
+
+interface WorkSessionClosePayload {
+  project_id?: number | null;
+  manager_user_id?: number | null;
+  notes?: string;
+  activities?: string;
+  break_minutes?: number;
+}
+
 
 
 // Storage keys
@@ -389,6 +418,18 @@ class ApiService {
   }
 
   // ============================================
+  // PROJECTS CATALOG ENDPOINTS
+  // ============================================
+
+  async listActiveProjects(): Promise<ListActiveProjectsResponse> {
+    return this.request<ListActiveProjectsResponse>('/projects/active/');
+  }
+
+  async listActiveCoordinators(): Promise<ListActiveCoordinatorsResponse> {
+    return this.request<ListActiveCoordinatorsResponse>('/projects/coordinators/active/');
+  }
+
+  // ============================================
   // REPORTS ENDPOINTS
   // ============================================
 
@@ -535,8 +576,8 @@ class ApiService {
   /**
    * Finaliza la jornada laboral
    */
-  async closeWorkSession(): Promise<WorkSessionCloseResponse> {
-    return this.post<WorkSessionCloseResponse>('/timelogs/work-session/close/', {});
+  async closeWorkSession(payload: WorkSessionClosePayload = {}): Promise<WorkSessionCloseResponse> {
+    return this.post<WorkSessionCloseResponse>('/timelogs/work-session/close/', payload);
   }
 }
 
