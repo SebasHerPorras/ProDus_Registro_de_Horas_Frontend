@@ -9,6 +9,9 @@ import api from '@/services/api'
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
 
+const EMOJI_EYE_VISIBLE = '👀'
+const EMOJI_EYE_HIDDEN = '🔒'
+
 const currentPassword = ref('')
 const newPassword = ref('')
 const newPasswordConfirm = ref('')
@@ -43,6 +46,10 @@ async function handleChangePassword() {
   } finally {
     loading.value = false
   }
+}
+
+const handleCancel = () => {
+  router.back()
 }
 
 const handleLogout = async () => {
@@ -92,7 +99,7 @@ const handleLogout = async () => {
                 class="password-toggle-btn"
                 @click="showCurrentPassword = !showCurrentPassword"
               >
-                {{ showCurrentPassword ? 'Ocultar' : 'Ver' }}
+                {{ showCurrentPassword ? EMOJI_EYE_HIDDEN : EMOJI_EYE_VISIBLE }}
               </AppButton>
             </div>
           </div>
@@ -118,7 +125,7 @@ const handleLogout = async () => {
                 class="password-toggle-btn"
                 @click="showNewPassword = !showNewPassword"
               >
-                {{ showNewPassword ? 'Ocultar' : 'Ver' }}
+                {{ showNewPassword ? EMOJI_EYE_HIDDEN : EMOJI_EYE_VISIBLE }}
               </AppButton>
             </div>
           </div>
@@ -143,7 +150,7 @@ const handleLogout = async () => {
                 class="password-toggle-btn"
                 @click="showNewPasswordConfirm = !showNewPasswordConfirm"
               >
-                {{ showNewPasswordConfirm ? 'Ocultar' : 'Ver' }}
+                {{ showNewPasswordConfirm ? EMOJI_EYE_HIDDEN : EMOJI_EYE_VISIBLE }}
               </AppButton>
             </div>
           </div>
@@ -153,7 +160,7 @@ const handleLogout = async () => {
               variant="secondary"
               size="md"
               type="button"
-              @click="handleLogout"
+              @click="handleCancel"
             >
               Cancelar
             </AppButton>

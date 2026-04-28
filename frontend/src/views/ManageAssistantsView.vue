@@ -14,12 +14,15 @@ import api from '@/services/api'
 const router = useRouter()
 const { userRole, userName, logout } = useAuth()
 const showAssistantForm = ref(false)
+const isEditingMode = ref(false)
 const showErrorModal = ref(false)
 const errorMessages = ref<string[]>([])
 const showScheduleModal = ref(false)
 const scheduleValidationError = ref('')
 const scheduleModalError = ref('')
 const isScheduleConfirmed = ref(false)
+const selectedAssistant = ref<AssistantRow | null>(null)
+const assistantIsActive = ref(false)
 const ASSISTANT_SCHEDULE_STORAGE_KEY = 'assistant_create_schedule_blocks'
 const ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY = 'assistant_create_schedule_draft_blocks'
 
@@ -78,6 +81,8 @@ const handleLogout = async () => {
 }
 
 const onAddAssistant = () => {
+  isEditingMode.value = false
+  selectedAssistant.value = null
   localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)
   localStorage.removeItem(ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY)
   showScheduleModal.value = false
@@ -85,6 +90,18 @@ const onAddAssistant = () => {
   scheduleModalError.value = ''
   isScheduleConfirmed.value = false
   showAssistantForm.value = true
+}
+
+const onEditAssistant = (assistant: AssistantRow) => {
+  selectedAssistant.value = assistant
+  assistantIsActive.value = assistant.status === 'Activo'
+  isEditingMode.value = true
+}
+
+const closeEditMode = () => {
+  isEditingMode.value = false
+  selectedAssistant.value = null
+  assistantIsActive.value = false
 }
 
 const onOpenScheduleModal = () => {
@@ -132,8 +149,13 @@ const onConfirmScheduleModal = () => {
 }
 
 const onAssistantAction = (payload: { actionKey: string; item: Record<string, unknown> }) => {
-  console.log(`Acción: ${payload.actionKey} en asistente:`, payload.item)
-  // TODO: Implementar lógica de editar/eliminar
+  if (payload.actionKey === 'edit') {
+    const item = payload.item as unknown as AssistantRow
+    onEditAssistant(item)
+  } else if (payload.actionKey === 'delete') {
+    console.log(`Eliminar asistente:`, payload.item)
+    // TODO: Implementar lógica de eliminar
+  }
 }
 
 const onConfirmAssistantForm = async (formData: Record<string, any>) => {
@@ -206,6 +228,8 @@ const onCancelAssistantForm = () => {
   isScheduleConfirmed.value = false
   showScheduleModal.value = false
   showAssistantForm.value = false
+  isEditingMode.value = false
+  selectedAssistant.value = null
 }
 
 const goBack = () => {
@@ -232,59 +256,144 @@ onMounted(() => {
     <div class="main-content">
       <button @click="goBack" class="back-button">← Volver</button>
 
-      <GenericDataList
-        title="Gestión de Asistentes"
-        :columns="assistantColumns"
-        :items="assistants"
-        :actions="assistantActions"
-        add-button-label="Añadir nuevo asistente"
-        @add="onAddAssistant"
-        @action="onAssistantAction"
-      />
+      <!-- VISTA DE LISTA DE ASISTENTES -->
+      <div v-if="!showAssistantForm && !isEditingMode">
+        <GenericDataList
+          title="Gestión de Asistentes"
+          :columns="assistantColumns"
+          :items="assistants"
+          :actions="assistantActions"
+          add-button-label="Añadir nuevo asistente"
+          @add="onAddAssistant"
+          @action="onAssistantAction"
+        />
 
-      <GenericForm
-        v-if="showAssistantForm"
-        title="Nuevo Asistente"
-        :fields="assistantFormFields"
-        confirm-text="Confirmar"
-        cancel-text="Cancelar"
-        @confirm="onConfirmAssistantForm"
-        @cancel="onCancelAssistantForm"
-      >
-        <template #extra>
-          <div class="schedule-action-row">
-            <AppButton variant="secondary" size="md" @click="onOpenScheduleModal">
-              Configurar horario inicial
-            </AppButton>
-            <p class="schedule-status" :class="{ confirmed: isScheduleConfirmed }">
-              {{ isScheduleConfirmed ? 'Horario confirmado' : 'Horario pendiente por confirmar' }}
-            </p>
-            <p v-if="scheduleValidationError" class="schedule-error">{{ scheduleValidationError }}</p>
-          </div>
-        </template>
-      </GenericForm>
+        <div v-if="showScheduleModal" class="schedule-modal-overlay">
+          <div class="schedule-modal-card">
+            <ScheduleBuilder
+              :storage-key="ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY"
+              heading="Horario inicial"
+              subheading="Cuando termines, confirma para guardar este horario en el asistente."
+            />
 
-      <div v-if="showScheduleModal" class="schedule-modal-overlay">
-        <div class="schedule-modal-card">
-          <ScheduleBuilder
-            :storage-key="ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY"
-            heading="Horario inicial"
-            subheading="Cuando termines, confirma para guardar este horario en el asistente."
-          />
+            <p v-if="scheduleModalError" class="schedule-error">{{ scheduleModalError }}</p>
 
-          <p v-if="scheduleModalError" class="schedule-error">{{ scheduleModalError }}</p>
-
-          <div class="schedule-modal-actions">
-            <AppButton variant="secondary" size="md" @click="onCancelScheduleModal">
-              Cancelar
-            </AppButton>
-            <AppButton variant="primary" size="md" @click="onConfirmScheduleModal">
-              Confirmar horario
-            </AppButton>
+            <div class="schedule-modal-actions">
+              <AppButton variant="secondary" size="md" @click="onCancelScheduleModal">
+                Cancelar
+              </AppButton>
+              <AppButton variant="primary" size="md" @click="onConfirmScheduleModal">
+                Confirmar horario
+              </AppButton>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- VISTA DE FORMULARIO (NUEVO ASISTENTE) -->
+      <div v-else-if="showAssistantForm && !isEditingMode">
+        <GenericForm
+          title="Nuevo Asistente"
+          :fields="assistantFormFields"
+          confirm-text="Confirmar"
+          cancel-text="Cancelar"
+          @confirm="onConfirmAssistantForm"
+          @cancel="onCancelAssistantForm"
+        >
+          <template #extra>
+            <div class="schedule-action-row">
+              <AppButton variant="secondary" size="md" @click="onOpenScheduleModal">
+                Configurar horario
+              </AppButton>
+              <p class="schedule-status" :class="{ confirmed: isScheduleConfirmed }">
+                {{ isScheduleConfirmed ? 'Horario confirmado' : 'Horario pendiente por confirmar' }}
+              </p>
+              <p v-if="scheduleValidationError" class="schedule-error">{{ scheduleValidationError }}</p>
+            </div>
+          </template>
+        </GenericForm>
+
+        <div v-if="showScheduleModal" class="schedule-modal-overlay">
+          <div class="schedule-modal-card">
+            <ScheduleBuilder
+              :storage-key="ASSISTANT_SCHEDULE_DRAFT_STORAGE_KEY"
+              heading="Horario"
+              subheading="Cuando termines, confirma para guardar este horario."
+            />
+
+            <p v-if="scheduleModalError" class="schedule-error">{{ scheduleModalError }}</p>
+
+            <div class="schedule-modal-actions">
+              <AppButton variant="secondary" size="md" @click="onCancelScheduleModal">
+                Cancelar
+              </AppButton>
+              <AppButton variant="primary" size="md" @click="onConfirmScheduleModal">
+                Confirmar horario
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA DE EDICIÓN DE ASISTENTE -->
+      <div v-else-if="isEditingMode && selectedAssistant">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 style="margin: 0; font-size: 1.5rem;">{{ selectedAssistant.name }}</h2>
+          <AppButton variant="secondary" size="sm" @click="closeEditMode">
+            ← Cerrar
+          </AppButton>
+        </div>
+
+        <div class="surface-card" style="margin-bottom: 1.5rem;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Información</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+              <label style="font-weight: 600; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem; font-size: 0.9rem;">Usuario:</label>
+              <span style="color: var(--color-text);">{{ selectedAssistant.username }}</span>
+            </div>
+            <div>
+              <label style="font-weight: 600; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem; font-size: 0.9rem;">Estado:</label>
+              <span :style="{ color: assistantIsActive ? 'var(--color-success-dark)' : 'var(--color-error-dark)', fontWeight: '500' }">
+                {{ assistantIsActive ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="surface-card">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Acciones</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+            <AppButton 
+              variant="secondary" 
+              size="md"
+              style="width: 100%;"
+            >
+              {{ assistantIsActive ? 'Desactivar' : 'Activar' }} asistente
+            </AppButton>
+            <AppButton 
+              variant="secondary" 
+              size="md"
+              style="width: 100%;"
+            >
+              Cambiar contraseña
+            </AppButton>
+            <AppButton 
+              variant="secondary" 
+              size="md"
+              style="width: 100%;"
+            >
+              Cambiar horario
+            </AppButton>
+            <AppButton 
+              variant="secondary" 
+              size="md"
+              style="width: 100%;"
+            >
+              Ver reportes
+            </AppButton>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

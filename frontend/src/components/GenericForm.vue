@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
+import { EMOJI_EYE_VISIBLE, EMOJI_EYE_HIDDEN } from '@/styles/emojis'
 
 interface GenericFormOption {
   label: string
@@ -250,7 +251,7 @@ const generateAndFillPassword = () => {
             @click="togglePasswordVisibility(field.name)"
             :aria-label="visiblePasswords.has(field.name) ? 'Ocultar contraseña' : 'Mostrar contraseña'"
           >
-            {{ visiblePasswords.has(field.name) ? '👁️' : '👁️‍🗨️' }}
+            {{ visiblePasswords.has(field.name) ? EMOJI_EYE_HIDDEN : EMOJI_EYE_VISIBLE }}
           </button>
 
           <!-- Solo aparece en el campo con generatePassword: true -->
@@ -381,29 +382,32 @@ const generateAndFillPassword = () => {
 .field-input {
   border: 1px solid var(--color-form-input-border);
   border-radius: 8px;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.9rem;
+  padding: 0.65rem 3.5rem 0.65rem 0.75rem;
+  font-size: 0.95rem;
   color: var(--color-text);
   background: var(--color-surface);
+  flex: 1;
 }
+
 .password-field-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .password-toggle-btn {
-  position: absolute;
-  right: 0.75rem;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0;
+  font-size: 1.1rem;
+  padding: 0.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .password-toggle-btn:hover {
@@ -412,6 +416,27 @@ const generateAndFillPassword = () => {
 
 .password-toggle-btn:focus {
   outline: none;
+}
+
+.password-generate-btn {
+  background: none;
+  border: 1px solid var(--color-form-input-border);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.password-generate-btn:hover {
+  background: var(--color-gray-100);
+  border-color: var(--color-primary);
 }
 
 .password-field-wrapper {
