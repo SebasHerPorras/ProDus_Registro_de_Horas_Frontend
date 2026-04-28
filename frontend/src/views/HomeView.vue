@@ -40,7 +40,7 @@ watch(
 // Opciones de menú según el rol
 const menuOptions = computed(() => {
   const commonOptions = [
-    { label: 'Registro de Horas', path: '/registro-horas' }
+    { label: 'Cambiar mi contraseña', path: '/change-password' }
   ]
 
   const roleMenus = {
