@@ -23,6 +23,7 @@ interface GenericFormField {
   spaceAfter?: string
   disabled?: boolean
   defaultValue?: string | number | boolean
+  generatePassword?: boolean 
 }
 
 const props = withDefaults(defineProps<{
@@ -46,6 +47,7 @@ const emit = defineEmits<{
 const formData = reactive<Record<string, any>>({})
 const errors = reactive<Record<string, string>>({})
 const visiblePasswords = ref<Set<string>>(new Set())
+const copiedPassword = ref(false)
 
 const sortedFields = computed(() => {
   return [...props.fields].sort((firstField, secondField) => {
@@ -64,11 +66,10 @@ const initializeForm = () => {
       formData[field.name] = field.defaultValue
       return
     }
-
-    if (field.type === 'checkbox') {      formData[field.name] = false
+    if (field.type === 'checkbox') {
+      formData[field.name] = false
       return
     }
-
     formData[field.name] = ''
   })
 }
@@ -81,9 +82,7 @@ watch(
 
 watch(
   () => formData,
-  () => {
-    emit('change', { ...formData })
-  },
+  () => emit('change', { ...formData }),
   { deep: true, immediate: true }
 )
 
@@ -124,12 +123,9 @@ const validateForm = (): boolean => {
 
   sortedFields.value.forEach((field) => {
     const error = validateField(field)
-    if (error) {
-      errors[field.name] = error
-    }
+    if (error) errors[field.name] = error
   })
 
-  // Validación especial: comparar password y password_confirm
   if (formData['password'] && formData['password_confirm']) {
     if (formData['password'] !== formData['password_confirm']) {
       errors['password_confirm'] = 'Las contraseñas no coinciden'
@@ -145,9 +141,7 @@ const onSubmit = () => {
 }
 
 const onCancel = () => {
-  if (props.resetOnCancel) {
-    initializeForm()
-  }
+  if (props.resetOnCancel) initializeForm()
   emit('cancel')
 }
 
@@ -166,10 +160,35 @@ const getPasswordInputType = (fieldName: string): string => {
 const getFieldCounterText = (field: GenericFormField): string => {
   const rawValue = formData[field.name]
   const value = typeof rawValue === 'string' ? rawValue : String(rawValue ?? '')
-  if (field.maxLength !== undefined) {
-    return `${value.length}/${field.maxLength}`
-  }
+  if (field.maxLength !== undefined) return `${value.length}/${field.maxLength}`
   return `${value.length}`
+}
+
+// ============================================
+// GENERAR CONTRASEÑA
+// ============================================
+const generateAndFillPassword = () => {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const lower = 'abcdefghijklmnopqrstuvwxyz'
+  const digits = '0123456789'
+  const all = upper + lower + digits
+
+  let pwd = ''
+  pwd += upper[Math.floor(Math.random() * upper.length)]
+  pwd += digits[Math.floor(Math.random() * digits.length)]
+  for (let i = 0; i < 8; i++) {
+    pwd += all[Math.floor(Math.random() * all.length)]
+  }
+
+  // Mezclar para que no sea predecible
+  pwd = pwd.split('').sort(() => Math.random() - 0.5).join('')
+
+  formData['password'] = pwd
+  formData['password_confirm'] = pwd
+
+  navigator.clipboard.writeText(pwd)
+  copiedPassword.value = true
+  setTimeout(() => (copiedPassword.value = false), 2000)
 }
 </script>
 
@@ -232,6 +251,16 @@ const getFieldCounterText = (field: GenericFormField): string => {
             :aria-label="visiblePasswords.has(field.name) ? 'Ocultar contraseña' : 'Mostrar contraseña'"
           >
             {{ visiblePasswords.has(field.name) ? '👁️' : '👁️‍🗨️' }}
+          </button>
+
+          <!-- Solo aparece en el campo con generatePassword: true -->
+          <button
+            v-if="field.generatePassword"
+            type="button"
+            class="password-generate-btn"
+            @click="generateAndFillPassword"
+          >
+            {{ copiedPassword ? '✅ Copiado' : '🔑 Generar' }}
           </button>
         </div>
 

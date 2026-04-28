@@ -21,6 +21,7 @@ interface AuthTokens {
     is_active: boolean;
     is_admin: boolean;
     role?: string;
+    needs_password_change?: boolean;
   };
 }
 
@@ -59,6 +60,7 @@ interface CreateAssistantResponse {
     is_active: boolean;
     is_admin: boolean;
     role?: string;
+    needs_password_change?: boolean;
   };
   assistant: {
     user_id: number;
@@ -139,6 +141,12 @@ interface WorkSessionClosePayload {
   break_minutes?: number;
 }
 
+interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  new_password_confirm: string;
+  needs_password_change?: boolean;
+}
 
 
 // Storage keys
@@ -255,19 +263,23 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
+
       // Si el backend envió diccionario de errores (ej. validaciones de formulario)
-      if (typeof errorData === 'object' && !errorData.detail && !errorData.message) {
+      if (
+        typeof errorData === "object" &&
+        !errorData.detail &&
+        !errorData.message
+      ) {
         // Extraemos los mensajes de las llaves del objeto JSON
         const allMessages: string[] = [];
         for (const key in errorData) {
           if (Array.isArray(errorData[key])) {
             allMessages.push(...errorData[key]);
-          } else if (typeof errorData[key] === 'string') {
+          } else if (typeof errorData[key] === "string") {
             allMessages.push(errorData[key]);
           }
         }
-        
+
         if (allMessages.length > 0) {
           throw new Error(JSON.stringify(allMessages));
         }
@@ -284,6 +296,24 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  /**
+   * 
+   * Cambia la contraseña del usuario actual.
+   * El backend validará que la contraseña actual sea correcta y que las nuevas contraseñas coincidan.
+   * el is neet password change se maneja en el backend, si el usuario tiene ese flag en true, se le redirige a esta vista para que cambie su contraseña, y una vez que lo haga, el backend se encargará de poner ese flag en false.
+   */
+  async changePassword(
+    payload: ChangePasswordPayload,
+  ): Promise<{ ok: boolean; detail: string }> {
+    return this.request<{ ok: boolean; detail: string }>(
+      "/users/change-password/",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
   }
 
   /**
@@ -422,11 +452,13 @@ class ApiService {
   // ============================================
 
   async listActiveProjects(): Promise<ListActiveProjectsResponse> {
-    return this.request<ListActiveProjectsResponse>('/projects/active/');
+    return this.request<ListActiveProjectsResponse>("/projects/active/");
   }
 
   async listActiveCoordinators(): Promise<ListActiveCoordinatorsResponse> {
-    return this.request<ListActiveCoordinatorsResponse>('/projects/coordinators/active/');
+    return this.request<ListActiveCoordinatorsResponse>(
+      "/projects/coordinators/active/",
+    );
   }
 
   // ============================================
@@ -558,26 +590,36 @@ class ApiService {
   // ============================================
   // WORK SESSION
   // ============================================
-  
+
   /**
    * Obtiene el estado actual de la jornada laboral
    */
   async getWorkSessionState(): Promise<WorkSessionStateResponse> {
-    return this.request<WorkSessionStateResponse>('/timelogs/work-session/current/');
+    return this.request<WorkSessionStateResponse>(
+      "/timelogs/work-session/current/",
+    );
   }
 
   /**
    * Inicia la jornada laboral
    */
   async startWorkSession(): Promise<WorkSessionStartResponse> {
-    return this.post<WorkSessionStartResponse>('/timelogs/work-session/start/', {});
+    return this.post<WorkSessionStartResponse>(
+      "/timelogs/work-session/start/",
+      {},
+    );
   }
 
   /**
    * Finaliza la jornada laboral
    */
-  async closeWorkSession(payload: WorkSessionClosePayload = {}): Promise<WorkSessionCloseResponse> {
-    return this.post<WorkSessionCloseResponse>('/timelogs/work-session/close/', payload);
+  async closeWorkSession(
+    payload: WorkSessionClosePayload = {},
+  ): Promise<WorkSessionCloseResponse> {
+    return this.post<WorkSessionCloseResponse>(
+      "/timelogs/work-session/close/",
+      payload,
+    );
   }
 }
 
