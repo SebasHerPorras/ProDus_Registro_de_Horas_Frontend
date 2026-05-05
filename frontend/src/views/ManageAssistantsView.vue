@@ -172,25 +172,32 @@ const onConfirmAssistantForm = async (formData: Record<string, any>) => {
   }>
 
   try {
-    const payload = {
+    const startDate = formData.start_date ? new Date(formData.start_date as string).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
+    const endDate = formData.end_date ? new Date(formData.end_date as string).toISOString().slice(0, 10) : null
+
+    const assistantPayload = {
       username: formData.username as string,
       full_name: formData.full_name as string, 
       password: formData.password as string | undefined,
       password_confirm: formData.password_confirm as string | undefined, 
-      start_date: formData.start_date ? new Date(formData.start_date as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      end_date: formData.end_date ? new Date(formData.end_date as string).toISOString().split('T')[0] : null,
+      start_date: startDate,
+      end_date: endDate,
       weekly_hours: Number(formData.weekly_hours), 
-      is_active: formData.is_active ?? true, 
-      
-      // Adjuntar los horarios sin work_minutes
-      schedule_blocks: confirmedBlocks.map(block => ({
-         day_of_week: block.day_of_week,
-         start_time: block.start_time,
-         end_time: block.end_time
-      }))
-    } as any
+      is_active: formData.is_active ?? true,
+    }
 
-    await api.createAssistant(payload)
+    const assistantResponse = await api.createAssistant(assistantPayload)
+
+    await api.createAssistantSchedule({
+      assistant: assistantResponse.assistant.id,
+      valid_from: startDate,
+      valid_to: endDate,
+      blocks: confirmedBlocks.map(block => ({
+        day_of_week: block.day_of_week,
+        start_time: block.start_time,
+        end_time: block.end_time
+      }))
+    })
     
     // Si funciona, limpiamos todo y cerramos
     localStorage.removeItem(ASSISTANT_SCHEDULE_STORAGE_KEY)

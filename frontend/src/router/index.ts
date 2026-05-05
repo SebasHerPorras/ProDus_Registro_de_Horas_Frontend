@@ -12,6 +12,7 @@ declare module "vue-router" {
   interface RouteMeta {
     requiresAuth?: boolean;
     requiredRoles?: string[];
+    allowPasswordChangeRequired?: boolean;
   }
 }
 
@@ -120,7 +121,7 @@ const router = createRouter({
       path: "/change-password",
       name: "change-password",
       component: ChangePasswordView,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, allowPasswordChangeRequired: true },
     },
   ],
 });
@@ -130,17 +131,26 @@ router.beforeEach((to) => {
   const isAuthenticated = isUserAuthenticated();
   const requiresAuth = to.meta.requiresAuth;
   const requiredRoles = to.meta.requiredRoles as string[] | undefined;
+  const user = getStoredUser();
 
   if (requiresAuth && !isAuthenticated) {
     return { name: 'login' };
   }
 
   if ((to.name === 'login' || to.name === 'login-page' || to.path === '/') && isAuthenticated) {
-    const user = getStoredUser();
     if (user?.needs_password_change) {
       return { name: 'change-password' };
     }
     return { name: 'home' };
+  }
+
+  if (
+    isAuthenticated &&
+    user?.needs_password_change &&
+    requiresAuth &&
+    !to.meta.allowPasswordChangeRequired
+  ) {
+    return { name: 'change-password' };
   }
 
   // Validar permisos de rol si la ruta los requiere

@@ -21,7 +21,7 @@ interface AuthTokens {
     is_active: boolean;
     is_admin: boolean;
     role?: string;
-    needs_password_change?: boolean;
+    needs_password_change: boolean;
   };
 }
 
@@ -43,30 +43,43 @@ interface CreateAssistantPayload {
   end_date?: string | null;
   weekly_hours: number;
   is_active?: boolean;
-  // Añadir esto nuevo:
-  schedule_blocks: Array<{
-    day_of_week: string;
-    start_time: string;
-    end_time: string;
-  }>;
+}
+
+interface ScheduleBlockPayload {
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface CreateAssistantSchedulePayload {
+  assistant: number;
+  valid_from: string;
+  valid_to?: string | null;
+  blocks: ScheduleBlockPayload[];
 }
 
 interface CreateAssistantResponse {
   ok: boolean;
-  user: {
-    id: number;
-    full_name: string;
-    username: string;
-    is_active: boolean;
-    is_admin: boolean;
-    role?: string;
-    needs_password_change?: boolean;
-  };
   assistant: {
-    user_id: number;
+    id: number;
+    username: string;
+    full_name: string;
+    is_active: boolean;
+    role?: string;
     start_date: string;
     end_date: string | null;
     weekly_hours: number;
+  };
+}
+
+interface CreateAssistantScheduleResponse {
+  ok: boolean;
+  schedule: {
+    id: number;
+    assistant: number;
+    valid_from: string;
+    valid_to: string | null;
+    blocks: Array<ScheduleBlockPayload & { id: number }>;
   };
 }
 
@@ -145,7 +158,7 @@ interface ChangePasswordPayload {
   current_password: string;
   new_password: string;
   new_password_confirm: string;
-  needs_password_change?: boolean;
+  needs_password_change: boolean;
 }
 
 
@@ -307,13 +320,26 @@ class ApiService {
   async changePassword(
     payload: ChangePasswordPayload,
   ): Promise<{ ok: boolean; detail: string }> {
-    return this.request<{ ok: boolean; detail: string }>(
+    const response = await this.request<{ ok: boolean; detail: string }>(
       "/users/change-password/",
       {
         method: "POST",
         body: JSON.stringify(payload),
       },
     );
+
+    const user = this.getUser();
+    if (user) {
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({
+          ...user,
+          needs_password_change: payload.needs_password_change,
+        }),
+      );
+    }
+
+    return response;
   }
 
   /**
@@ -529,6 +555,18 @@ class ApiService {
   // ============================================
   // SCHEDULES ENDPOINTS
   // ============================================
+
+  /**
+   * Crea el horario inicial de un asistente.
+   */
+  async createAssistantSchedule(
+    payload: CreateAssistantSchedulePayload,
+  ): Promise<CreateAssistantScheduleResponse> {
+    return this.request<CreateAssistantScheduleResponse>("/schedules/create/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
 
   /**
    * Obtiene el horario del usuario.
