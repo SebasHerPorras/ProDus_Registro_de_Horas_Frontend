@@ -161,6 +161,50 @@ interface ChangePasswordPayload {
   needs_password_change: boolean;
 }
 
+// ============================================
+// TIME LOGS (ADMIN)
+// ============================================
+interface TimeLogAssistant {
+  id: number;
+  full_name: string;
+  username?: string;
+}
+
+interface TimeLogProject {
+  id: number;
+  name: string;
+}
+
+interface TimeLogItem {
+  id: number;
+  assistant: TimeLogAssistant;
+  project?: TimeLogProject | null;
+  check_in: string;
+  check_out: string | null;
+  status: string;
+  elapsed_seconds: number;
+  approved_by?: { id: number; full_name: string } | null;
+  approved_at?: string | null;
+  decision_comment?: string | null;
+}
+
+interface GetTimeLogsResponse {
+  ok: boolean;
+  results: TimeLogItem[];
+}
+
+interface AdminTimeLogsFiltersPayload {
+  month: string | null;
+  studentId: string | null;
+  status: 'pending' | 'approved' | 'rejected' | null;
+}
+
+interface FilterAdminTimeLogsResponse {
+  ok: boolean;
+  filters: AdminTimeLogsFiltersPayload;
+  results: TimeLogItem[];
+}
+
 
 // Storage keys
 const ACCESS_TOKEN_KEY = 'access_token';
@@ -657,6 +701,44 @@ class ApiService {
     return this.post<WorkSessionCloseResponse>(
       "/timelogs/work-session/close/",
       payload,
+    );
+  }
+
+  // ============================================
+  // TIME LOGS (ADMIN)
+  // ============================================
+
+  /**
+   * Obtiene timelogs filtrados por mes.
+   * month debe venir en formato 'YYYY-MM' (ej. '2026-05').
+   */
+  async getTimeLogs(month?: string): Promise<GetTimeLogsResponse> {
+    const suffix = month ? `?month=${encodeURIComponent(month)}` : "";
+    return this.request<GetTimeLogsResponse>(`/timelogs/${suffix}`);
+  }
+
+  /**
+   * Actualiza campos de un TimeLog (ej. status, decision_comment).
+   */
+  async patchTimeLog(
+    id: number,
+    payload: Partial<{ status: string; decision_comment?: string }>,
+  ): Promise<{ ok: boolean; time_log: TimeLogItem }> {
+    return this.patch<{ ok: boolean; time_log: TimeLogItem }>(
+      `/timelogs/${id}/`,
+      payload,
+    );
+  }
+
+  /**
+   * Lista registros de jornada de administración con filtros dinámicos.
+   */
+  async filterAdminTimeLogs(
+    filters: AdminTimeLogsFiltersPayload,
+  ): Promise<FilterAdminTimeLogsResponse> {
+    return this.post<FilterAdminTimeLogsResponse>(
+      '/timelogs/admin/filter/',
+      filters,
     );
   }
 }

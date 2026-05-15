@@ -270,6 +270,7 @@ onMounted(() => {
           :columns="assistantColumns"
           :items="assistants"
           :actions="assistantActions"
+          :show-add-button="true"
           add-button-label="Añadir nuevo asistente"
           @add="onAddAssistant"
           @action="onAssistantAction"

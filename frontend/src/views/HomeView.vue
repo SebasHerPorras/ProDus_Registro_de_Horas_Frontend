@@ -51,12 +51,13 @@ const menuOptions = computed(() => {
     ],
     coordinador: [
       ...commonOptions,
-      { label: 'Gestionar Equipo', path: '/equipo' },
+      { label: 'Gestionar Jornadas', path: '/gestionar-jornadas' },
       { label: 'Reportes del Proyecto', path: '/reportes-proyecto' },
       { label: 'Horarios Equipo', path: '/horarios-equipo' }
     ],
     admin: [
       ...commonOptions,
+      { label: 'Gestionar Jornadas', path: '/gestionar-jornadas' },
       { label: 'Gestionar Usuarios', path: '/usuarios' },
       { label: 'Configuración Sistema', path: '/configuracion' },
       { label: 'Reportes Globales', path: '/reportes-globales' },

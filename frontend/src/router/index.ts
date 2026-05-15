@@ -6,6 +6,7 @@ import BlockedView from "../views/BlockedView.vue";
 import ManageAssistantsView from "../views/ManageAssistantsView.vue";
 import WorkSessionCloseView from "../views/WorkSessionCloseView.vue";
 import ChangePasswordView from "../views/ChangePasswordView.vue";
+import AdminTimeLogsView from "../views/AdminTimeLogsView.vue";
 
 // Extender tipo de RouteMeta para agregar requiredRoles
 declare module "vue-router" {
@@ -122,6 +123,12 @@ const router = createRouter({
       name: "change-password",
       component: ChangePasswordView,
       meta: { requiresAuth: true, allowPasswordChangeRequired: true },
+    },
+    {
+      path: "/gestionar-jornadas",
+      name: "manage-timelogs",
+      component: AdminTimeLogsView,
+      meta: { requiresAuth: true, requiredRoles: ["coordinador", "admin"] },
     },
   ],
 });
