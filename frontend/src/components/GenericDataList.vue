@@ -16,10 +16,12 @@ const props = withDefaults(defineProps<{
   items: Record<string, unknown>[]
   columns: ListColumn[]
   actions?: ListAction[]
+  showAddButton?: boolean
   addButtonLabel?: string
   emptyMessage?: string
 }>(), {
   actions: () => [],
+  showAddButton: false,
   addButtonLabel: 'Añadir uno nuevo',
   emptyMessage: 'No hay datos para mostrar'
 })
@@ -56,7 +58,7 @@ const onAction = (actionKey: string, item: Record<string, unknown>) => {
   <section class="generic-list-section">
     <div class="generic-list-header">
       <h3 class="section-title">{{ title }}</h3>
-      <button class="add-item-btn" type="button" @click="emit('add')">{{ addButtonLabel }}</button>
+      <button v-if="props.showAddButton" class="add-item-btn" type="button" @click="emit('add')">{{ addButtonLabel }}</button>
     </div>
 
     <div class="generic-list-wrapper" v-if="items.length > 0">

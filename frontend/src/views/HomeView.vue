@@ -7,6 +7,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import WelcomeBanner from '@/components/WelcomeBanner.vue'
 import MenuButton from '@/components/MenuButton.vue'
 import InfoCard from '@/components/InfoCard.vue'
+import WorkSessionWidget from '@/components/WorkSessionWidget.vue'
 import api from '@/services/api'
 
 const router = useRouter()
@@ -39,7 +40,7 @@ watch(
 // Opciones de menú según el rol
 const menuOptions = computed(() => {
   const commonOptions = [
-    { label: 'Registro de Horas', path: '/registro-horas' }
+    { label: 'Cambiar mi contraseña', path: '/change-password' }
   ]
 
   const roleMenus = {
@@ -50,12 +51,13 @@ const menuOptions = computed(() => {
     ],
     coordinador: [
       ...commonOptions,
-      { label: 'Gestionar Equipo', path: '/equipo' },
+      { label: 'Gestionar Jornadas', path: '/gestionar-jornadas' },
       { label: 'Reportes del Proyecto', path: '/reportes-proyecto' },
       { label: 'Horarios Equipo', path: '/horarios-equipo' }
     ],
     admin: [
       ...commonOptions,
+      { label: 'Gestionar Jornadas', path: '/gestionar-jornadas' },
       { label: 'Gestionar Usuarios', path: '/usuarios' },
       { label: 'Configuración Sistema', path: '/configuracion' },
       { label: 'Reportes Globales', path: '/reportes-globales' },
@@ -97,9 +99,12 @@ const handleLogout = async () => {
     <div class="main-content">
       <!-- Banner de bienvenida -->
       <WelcomeBanner 
-        :title="`Bienvenido, ${userName || 'Usuario'}`"
+        :title="`Bienvenid@, ${userName || 'Usuario'}`"
         :subtitle="`Acceso rápido a tus herramientas de ${getRoleLabel().toLowerCase()}`"
       />
+
+      <!-- Widget de Jornada Laboral (Solo asistentes) -->
+      <WorkSessionWidget v-if="userRole === 'asistente'" />
 
       <!-- Grid de opciones según rol -->
       <section class="menu-grid">

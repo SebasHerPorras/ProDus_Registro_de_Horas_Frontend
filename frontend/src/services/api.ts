@@ -21,6 +21,7 @@ interface AuthTokens {
     is_active: boolean;
     is_admin: boolean;
     role?: string;
+    needs_password_change: boolean;
   };
 }
 
@@ -42,29 +43,43 @@ interface CreateAssistantPayload {
   end_date?: string | null;
   weekly_hours: number;
   is_active?: boolean;
-  // Añadir esto nuevo:
-  schedule_blocks: Array<{
-    day_of_week: string;
-    start_time: string;
-    end_time: string;
-  }>;
+}
+
+interface ScheduleBlockPayload {
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface CreateAssistantSchedulePayload {
+  assistant: number;
+  valid_from: string;
+  valid_to?: string | null;
+  blocks: ScheduleBlockPayload[];
 }
 
 interface CreateAssistantResponse {
   ok: boolean;
-  user: {
-    id: number;
-    full_name: string;
-    username: string;
-    is_active: boolean;
-    is_admin: boolean;
-    role?: string;
-  };
   assistant: {
-    user_id: number;
+    id: number;
+    username: string;
+    full_name: string;
+    is_active: boolean;
+    role?: string;
     start_date: string;
     end_date: string | null;
     weekly_hours: number;
+  };
+}
+
+interface CreateAssistantScheduleResponse {
+  ok: boolean;
+  schedule: {
+    id: number;
+    assistant: number;
+    valid_from: string;
+    valid_to: string | null;
+    blocks: Array<ScheduleBlockPayload & { id: number }>;
   };
 }
 
@@ -80,6 +95,115 @@ interface ListAssistantsResponse {
   results: AssistantListItem[];
 }
 
+interface WorkSessionData {
+  id: number;
+  check_in: string;
+  check_out: string | null;
+  status_code: string;
+  work_description: string;
+  break_minutes: number;
+  elapsed_seconds: number;
+  is_active: boolean;
+}
+
+interface WorkSessionStateResponse {
+  ok: boolean;
+  active_session: boolean;
+  session: WorkSessionData | null;
+  server_now: string;
+  elapsed_seconds?: number;
+}
+
+interface WorkSessionStartResponse {
+  ok: boolean;
+  session: WorkSessionData;
+}
+
+interface WorkSessionCloseResponse {
+  ok: boolean;
+  closed_session: WorkSessionData;
+  server_now: string;
+}
+
+interface ActiveProjectItem {
+  id: number;
+  name: string;
+}
+
+interface ActiveCoordinatorItem {
+  id: number;
+  full_name: string;
+  username: string;
+}
+
+interface ListActiveProjectsResponse {
+  ok: boolean;
+  results: ActiveProjectItem[];
+}
+
+interface ListActiveCoordinatorsResponse {
+  ok: boolean;
+  results: ActiveCoordinatorItem[];
+}
+
+interface WorkSessionClosePayload {
+  project_id?: number | null;
+  manager_user_id?: number | null;
+  notes?: string;
+  activities?: string;
+  break_minutes?: number;
+}
+
+interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  new_password_confirm: string;
+  needs_password_change: boolean;
+}
+
+// ============================================
+// TIME LOGS (ADMIN)
+// ============================================
+interface TimeLogAssistant {
+  id: number;
+  full_name: string;
+  username?: string;
+}
+
+interface TimeLogProject {
+  id: number;
+  name: string;
+}
+
+interface TimeLogItem {
+  id: number;
+  assistant: TimeLogAssistant;
+  project?: TimeLogProject | null;
+  check_in: string;
+  check_out: string | null;
+  status: string;
+  elapsed_seconds: number;
+  approved_by?: { id: number; full_name: string } | null;
+  approved_at?: string | null;
+  decision_comment?: string | null;
+}
+
+interface GetTimeLogsResponse {
+  ok: boolean;
+  results: TimeLogItem[];
+}
+
+interface AdminTimeLogsFiltersPayload {
+  month: string | null;
+  studentId: string | null;
+  status: 'pending' | 'approved' | 'rejected' | null;
+}
+
+interface FilterAdminTimeLogsResponse {
+  ok: boolean;
+  filters: AdminTimeLogsFiltersPayload;
+  results: TimeLogItem[];
+}
 
 
 // Storage keys
@@ -196,19 +320,23 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
+
       // Si el backend envió diccionario de errores (ej. validaciones de formulario)
-      if (typeof errorData === 'object' && !errorData.detail && !errorData.message) {
+      if (
+        typeof errorData === "object" &&
+        !errorData.detail &&
+        !errorData.message
+      ) {
         // Extraemos los mensajes de las llaves del objeto JSON
         const allMessages: string[] = [];
         for (const key in errorData) {
           if (Array.isArray(errorData[key])) {
             allMessages.push(...errorData[key]);
-          } else if (typeof errorData[key] === 'string') {
+          } else if (typeof errorData[key] === "string") {
             allMessages.push(errorData[key]);
           }
         }
-        
+
         if (allMessages.length > 0) {
           throw new Error(JSON.stringify(allMessages));
         }
@@ -228,6 +356,37 @@ class ApiService {
   }
 
   /**
+   * 
+   * Cambia la contraseña del usuario actual.
+   * El backend validará que la contraseña actual sea correcta y que las nuevas contraseñas coincidan.
+   * el is neet password change se maneja en el backend, si el usuario tiene ese flag en true, se le redirige a esta vista para que cambie su contraseña, y una vez que lo haga, el backend se encargará de poner ese flag en false.
+   */
+  async changePassword(
+    payload: ChangePasswordPayload,
+  ): Promise<{ ok: boolean; detail: string }> {
+    const response = await this.request<{ ok: boolean; detail: string }>(
+      "/users/change-password/",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+
+    const user = this.getUser();
+    if (user) {
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({
+          ...user,
+          needs_password_change: payload.needs_password_change,
+        }),
+      );
+    }
+
+    return response;
+  }
+
+  /**
    * Intenta refrescar el token de acceso.
    */
   async refreshToken(): Promise<boolean> {
@@ -235,7 +394,7 @@ class ApiService {
     if (!refreshToken) return false;
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/refresh/`, {
+      const response = await fetch(`${this.baseUrl}/users/auth/refresh/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: refreshToken }),
@@ -263,7 +422,7 @@ class ApiService {
    */
   async login(credentials: LoginCredentials): Promise<AuthTokens> {
     const data = await this.request<AuthTokens>(
-      "/auth/login/",
+      "/users/auth/login/",
       {
         method: "POST",
         body: JSON.stringify(credentials),
@@ -279,7 +438,7 @@ class ApiService {
    */
   async checkIP(): Promise<CheckIPResponse> {
     return this.request<CheckIPResponse>(
-      "/auth/check-ip/",
+      "/users/auth/validate-institute-ip/",
       {
         method: "GET",
       },
@@ -300,7 +459,7 @@ class ApiService {
       allowed: boolean;
       client_ip?: string;
       message?: string;
-    }>("/auth/validate-institute-ip/", {});
+    }>("/users/auth/validate-institute-ip/", {});
   }
 
   /**
@@ -309,7 +468,7 @@ class ApiService {
   async logout(): Promise<void> {
     try {
       await this.request<{ detail: string }>(
-        "/auth/logout/",
+        "/users/auth/logout/",
         {
           method: "POST",
         },
@@ -337,7 +496,7 @@ class ApiService {
     const response = await this.request<{
       ok: boolean;
       user: AuthTokens["user"];
-    }>("/users/me/");
+    }>("/users/auth/me/");
     return response.user;
   }
 
@@ -347,7 +506,7 @@ class ApiService {
   async createAssistant(
     payload: CreateAssistantPayload,
   ): Promise<CreateAssistantResponse> {
-    return this.request<CreateAssistantResponse>("/assistants/", {
+    return this.request<CreateAssistantResponse>("/users/assistants/", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -355,7 +514,21 @@ class ApiService {
 
   // lista de asistentes
   async listAssistants(): Promise<ListAssistantsResponse> {
-    return this.request<ListAssistantsResponse>("/assistants/list/");
+    return this.request<ListAssistantsResponse>("/users/assistants/list/");
+  }
+
+  // ============================================
+  // PROJECTS CATALOG ENDPOINTS
+  // ============================================
+
+  async listActiveProjects(): Promise<ListActiveProjectsResponse> {
+    return this.request<ListActiveProjectsResponse>("/projects/active/");
+  }
+
+  async listActiveCoordinators(): Promise<ListActiveCoordinatorsResponse> {
+    return this.request<ListActiveCoordinatorsResponse>(
+      "/projects/coordinators/active/",
+    );
   }
 
   // ============================================
@@ -428,6 +601,18 @@ class ApiService {
   // ============================================
 
   /**
+   * Crea el horario inicial de un asistente.
+   */
+  async createAssistantSchedule(
+    payload: CreateAssistantSchedulePayload,
+  ): Promise<CreateAssistantScheduleResponse> {
+    return this.request<CreateAssistantScheduleResponse>("/schedules/create/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /**
    * Obtiene el horario del usuario.
    */
   async getMySchedule(): Promise<unknown> {
@@ -482,6 +667,79 @@ class ApiService {
     return this.request<T>(endpoint, {
       method: "DELETE",
     });
+  }
+
+  // ============================================
+  // WORK SESSION
+  // ============================================
+
+  /**
+   * Obtiene el estado actual de la jornada laboral
+   */
+  async getWorkSessionState(): Promise<WorkSessionStateResponse> {
+    return this.request<WorkSessionStateResponse>(
+      "/timelogs/work-session/current/",
+    );
+  }
+
+  /**
+   * Inicia la jornada laboral
+   */
+  async startWorkSession(): Promise<WorkSessionStartResponse> {
+    return this.post<WorkSessionStartResponse>(
+      "/timelogs/work-session/start/",
+      {},
+    );
+  }
+
+  /**
+   * Finaliza la jornada laboral
+   */
+  async closeWorkSession(
+    payload: WorkSessionClosePayload = {},
+  ): Promise<WorkSessionCloseResponse> {
+    return this.post<WorkSessionCloseResponse>(
+      "/timelogs/work-session/close/",
+      payload,
+    );
+  }
+
+  // ============================================
+  // TIME LOGS (ADMIN)
+  // ============================================
+
+  /**
+   * Obtiene timelogs filtrados por mes.
+   * month debe venir en formato 'YYYY-MM' (ej. '2026-05').
+   */
+  async getTimeLogs(month?: string): Promise<GetTimeLogsResponse> {
+    const suffix = month ? `?month=${encodeURIComponent(month)}` : "";
+    return this.request<GetTimeLogsResponse>(`/timelogs/${suffix}`);
+  }
+
+  /**
+   * Actualiza campos de un TimeLog (ej. status, decision_comment).
+   */
+  async patchTimeLog(
+    id: number,
+    payload: Partial<{ status: string; decision_comment?: string }>,
+  ): Promise<{ ok: boolean; time_log: TimeLogItem }> {
+    return this.patch<{ ok: boolean; time_log: TimeLogItem }>(
+      `/timelogs/${id}/`,
+      payload,
+    );
+  }
+
+  /**
+   * Lista registros de jornada de administración con filtros dinámicos.
+   */
+  async filterAdminTimeLogs(
+    filters: AdminTimeLogsFiltersPayload,
+  ): Promise<FilterAdminTimeLogsResponse> {
+    return this.post<FilterAdminTimeLogsResponse>(
+      '/timelogs/admin/filter/',
+      filters,
+    );
   }
 }
 

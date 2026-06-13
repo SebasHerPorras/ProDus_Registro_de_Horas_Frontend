@@ -15,9 +15,16 @@
   --color-success: #10b981;
   --color-success-dark: #059669;
   --color-warning: #f59e0b;
+  --color-warning-dark: #92400e;
   --color-error: #ef4444;
   --color-error-dark: #dc2626;
   --color-info: #3b82f6;
+  --color-success-soft: #ecfdf5;
+  --color-success-border: #6ee7b7;
+  --color-error-soft: #fef2f2;
+  --color-error-border: #fca5a5;
+  --color-warning-soft: #fffbeb;
+  --color-warning-border: #fcd34d;
 
   --menu-button-bg: #ffffff;
   --menu-button-border: #e0e0e0;
@@ -40,6 +47,95 @@ body {
   margin: 0;
   background: var(--color-background);
   color: var(--color-text);
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.app-main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.app-main-content-sm {
+  max-width: 980px;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.surface-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.page-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.4rem;
+}
+
+.page-subtitle {
+  margin-top: 0.45rem;
+  margin-bottom: 1rem;
+  color: var(--color-text-muted);
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.form-control {
+  border: 1px solid var(--color-form-input-border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.status-banner {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.status-banner-success {
+  color: var(--color-success-dark);
+  background: var(--color-success-soft);
+  border: 1px solid var(--color-success-border);
+}
+
+.status-banner-error {
+  color: var(--color-error-dark);
+  background: var(--color-error-soft);
+  border: 1px solid var(--color-error-border);
+}
+
+.status-banner-warning {
+  color: var(--color-warning-dark);
+  background: var(--color-warning-soft);
+  border: 1px solid var(--color-warning-border);
+}
+
+@media (max-width: 768px) {
+  .app-main-content,
+  .app-main-content-sm {
+    padding: 1.5rem 1rem;
+  }
 }
 
 .login-page {

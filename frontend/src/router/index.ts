@@ -4,12 +4,16 @@ import HomeView from "../views/HomeView.vue";
 import RegistroHorasView from "../views/RegistroHorasView.vue";
 import BlockedView from "../views/BlockedView.vue";
 import ManageAssistantsView from "../views/ManageAssistantsView.vue";
+import WorkSessionCloseView from "../views/WorkSessionCloseView.vue";
+import ChangePasswordView from "../views/ChangePasswordView.vue";
+import AdminTimeLogsView from "../views/AdminTimeLogsView.vue";
 
 // Extender tipo de RouteMeta para agregar requiredRoles
 declare module "vue-router" {
   interface RouteMeta {
     requiresAuth?: boolean;
     requiredRoles?: string[];
+    allowPasswordChangeRequired?: boolean;
   }
 }
 
@@ -60,6 +64,17 @@ const getUserRoleFromToken = (): string | null => {
   }
 };
 
+const getStoredUser = (): { needs_password_change?: boolean } | null => {
+  const user = localStorage.getItem('user');
+  if (!user) return null;
+
+  try {
+    return JSON.parse(user);
+  } catch {
+    return null;
+  }
+};
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -95,8 +110,25 @@ const router = createRouter({
       path: "/gestionar-asistentes",
       name: "manage-assistants",
       component: ManageAssistantsView,
-      meta: { requiresAuth: true, requiredRoles: ['coordinador', 'admin'] },
-
+      meta: { requiresAuth: true, requiredRoles: ["coordinador", "admin"] },
+    },
+    {
+      path: "/jornada/cierre",
+      name: "work-session-close",
+      component: WorkSessionCloseView,
+      meta: { requiresAuth: true, requiredRoles: ["asistente", "assistant"] },
+    },
+    {
+      path: "/change-password",
+      name: "change-password",
+      component: ChangePasswordView,
+      meta: { requiresAuth: true, allowPasswordChangeRequired: true },
+    },
+    {
+      path: "/gestionar-jornadas",
+      name: "manage-timelogs",
+      component: AdminTimeLogsView,
+      meta: { requiresAuth: true, requiredRoles: ["coordinador", "admin"] },
     },
   ],
 });
@@ -106,13 +138,26 @@ router.beforeEach((to) => {
   const isAuthenticated = isUserAuthenticated();
   const requiresAuth = to.meta.requiresAuth;
   const requiredRoles = to.meta.requiredRoles as string[] | undefined;
+  const user = getStoredUser();
 
   if (requiresAuth && !isAuthenticated) {
     return { name: 'login' };
   }
 
   if ((to.name === 'login' || to.name === 'login-page' || to.path === '/') && isAuthenticated) {
+    if (user?.needs_password_change) {
+      return { name: 'change-password' };
+    }
     return { name: 'home' };
+  }
+
+  if (
+    isAuthenticated &&
+    user?.needs_password_change &&
+    requiresAuth &&
+    !to.meta.allowPasswordChangeRequired
+  ) {
+    return { name: 'change-password' };
   }
 
   // Validar permisos de rol si la ruta los requiere

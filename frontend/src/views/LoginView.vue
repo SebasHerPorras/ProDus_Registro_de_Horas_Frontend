@@ -13,8 +13,13 @@ async function handleLogin() {
   errorMessage.value = ''
   loading.value = true
   try {
-    await api.login({ username: username.value, password: password.value })
-    // Redirige al home si el login es exitoso
+    const authData = await api.login({ username: username.value, password: password.value })
+
+    if (authData.user.needs_password_change) {
+      router.push('/change-password')
+      return
+    }
+
     router.push('/home')
   } catch (error) {
     errorMessage.value = 'Usuario o contraseña incorrectos'

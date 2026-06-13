@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import AppButton from '@/components/AppButton.vue'
+import { EMOJI_EYE_VISIBLE, EMOJI_EYE_HIDDEN } from '@/styles/emojis'
 
 interface GenericFormOption {
   label: string
@@ -13,6 +14,8 @@ interface GenericFormField {
   type?: string
   placeholder?: string
   required?: boolean
+  maxLength?: number
+  showCounter?: boolean
   pattern?: string
   patternMessage?: string
   options?: GenericFormOption[]
@@ -21,6 +24,7 @@ interface GenericFormField {
   spaceAfter?: string
   disabled?: boolean
   defaultValue?: string | number | boolean
+  generatePassword?: boolean 
 }
 
 const props = withDefaults(defineProps<{
@@ -28,19 +32,23 @@ const props = withDefaults(defineProps<{
   fields: GenericFormField[]
   confirmText?: string
   cancelText?: string
+  resetOnCancel?: boolean
 }>(), {
   confirmText: 'Confirmar',
-  cancelText: 'Cancelar'
+  cancelText: 'Cancelar',
+  resetOnCancel: true,
 })
 
 const emit = defineEmits<{
   confirm: [payload: Record<string, unknown>]
   cancel: []
+  change: [payload: Record<string, unknown>]
 }>()
 
 const formData = reactive<Record<string, any>>({})
 const errors = reactive<Record<string, string>>({})
 const visiblePasswords = ref<Set<string>>(new Set())
+const copiedPassword = ref(false)
 
 const sortedFields = computed(() => {
   return [...props.fields].sort((firstField, secondField) => {
@@ -59,11 +67,10 @@ const initializeForm = () => {
       formData[field.name] = field.defaultValue
       return
     }
-
-    if (field.type === 'checkbox') {      formData[field.name] = false
+    if (field.type === 'checkbox') {
+      formData[field.name] = false
       return
     }
-
     formData[field.name] = ''
   })
 }
@@ -72,6 +79,12 @@ watch(
   () => props.fields,
   () => initializeForm(),
   { immediate: true, deep: true }
+)
+
+watch(
+  () => formData,
+  () => emit('change', { ...formData }),
+  { deep: true, immediate: true }
 )
 
 const getFieldClasses = (field: GenericFormField): string[] => {
@@ -111,12 +124,9 @@ const validateForm = (): boolean => {
 
   sortedFields.value.forEach((field) => {
     const error = validateField(field)
-    if (error) {
-      errors[field.name] = error
-    }
+    if (error) errors[field.name] = error
   })
 
-  // Validación especial: comparar password y password_confirm
   if (formData['password'] && formData['password_confirm']) {
     if (formData['password'] !== formData['password_confirm']) {
       errors['password_confirm'] = 'Las contraseñas no coinciden'
@@ -132,7 +142,7 @@ const onSubmit = () => {
 }
 
 const onCancel = () => {
-  initializeForm()
+  if (props.resetOnCancel) initializeForm()
   emit('cancel')
 }
 
@@ -146,6 +156,40 @@ const togglePasswordVisibility = (fieldName: string) => {
 
 const getPasswordInputType = (fieldName: string): string => {
   return visiblePasswords.value.has(fieldName) ? 'text' : 'password'
+}
+
+const getFieldCounterText = (field: GenericFormField): string => {
+  const rawValue = formData[field.name]
+  const value = typeof rawValue === 'string' ? rawValue : String(rawValue ?? '')
+  if (field.maxLength !== undefined) return `${value.length}/${field.maxLength}`
+  return `${value.length}`
+}
+
+// ============================================
+// GENERAR CONTRASEÑA
+// ============================================
+const generateAndFillPassword = () => {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const lower = 'abcdefghijklmnopqrstuvwxyz'
+  const digits = '0123456789'
+  const all = upper + lower + digits
+
+  let pwd = ''
+  pwd += upper[Math.floor(Math.random() * upper.length)]
+  pwd += digits[Math.floor(Math.random() * digits.length)]
+  for (let i = 0; i < 8; i++) {
+    pwd += all[Math.floor(Math.random() * all.length)]
+  }
+
+  // Mezclar para que no sea predecible
+  pwd = pwd.split('').sort(() => Math.random() - 0.5).join('')
+
+  formData['password'] = pwd
+  formData['password_confirm'] = pwd
+
+  navigator.clipboard.writeText(pwd)
+  copiedPassword.value = true
+  setTimeout(() => (copiedPassword.value = false), 2000)
 }
 </script>
 
@@ -170,6 +214,7 @@ const getPasswordInputType = (fieldName: string): string => {
           v-model="formData[field.name]"
           class="field-input field-textarea"
           :placeholder="field.placeholder || ''"
+          :maxlength="field.maxLength"
           :disabled="field.disabled"
           rows="3"
         />
@@ -206,7 +251,17 @@ const getPasswordInputType = (fieldName: string): string => {
             @click="togglePasswordVisibility(field.name)"
             :aria-label="visiblePasswords.has(field.name) ? 'Ocultar contraseña' : 'Mostrar contraseña'"
           >
-            {{ visiblePasswords.has(field.name) ? '👁️' : '👁️‍🗨️' }}
+            {{ visiblePasswords.has(field.name) ? EMOJI_EYE_HIDDEN : EMOJI_EYE_VISIBLE }}
+          </button>
+
+          <!-- Solo aparece en el campo con generatePassword: true -->
+          <button
+            v-if="field.generatePassword"
+            type="button"
+            class="password-generate-btn"
+            @click="generateAndFillPassword"
+          >
+            {{ copiedPassword ? '✅ Copiado' : '🔑 Generar' }}
           </button>
         </div>
 
@@ -227,8 +282,16 @@ const getPasswordInputType = (fieldName: string): string => {
           class="field-input"
           :type="field.type || 'text'"
           :placeholder="field.placeholder || ''"
+          :maxlength="field.maxLength"
           :disabled="field.disabled"
         />
+
+        <p
+          class="field-counter"
+          v-if="field.showCounter && (field.type === 'textarea' || field.type === 'text' || field.type === 'password')"
+        >
+          {{ getFieldCounterText(field) }}
+        </p>
 
         <p class="field-error" v-if="errors[field.name]">{{ errors[field.name] }}</p>
       </div>
@@ -319,29 +382,32 @@ const getPasswordInputType = (fieldName: string): string => {
 .field-input {
   border: 1px solid var(--color-form-input-border);
   border-radius: 8px;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.9rem;
+  padding: 0.65rem 3.5rem 0.65rem 0.75rem;
+  font-size: 0.95rem;
   color: var(--color-text);
   background: var(--color-surface);
+  flex: 1;
 }
-password-field-wrapper {
+
+.password-field-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .password-toggle-btn {
-  position: absolute;
-  right: 0.75rem;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0;
+  font-size: 1.1rem;
+  padding: 0.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .password-toggle-btn:hover {
@@ -350,6 +416,27 @@ password-field-wrapper {
 
 .password-toggle-btn:focus {
   outline: none;
+}
+
+.password-generate-btn {
+  background: none;
+  border: 1px solid var(--color-form-input-border);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.password-generate-btn:hover {
+  background: var(--color-gray-100);
+  border-color: var(--color-primary);
 }
 
 .password-field-wrapper {
@@ -380,6 +467,13 @@ password-field-wrapper {
   margin-top: 0.35rem;
   color: var(--color-error-dark);
   font-size: 0.8rem;
+}
+
+.field-counter {
+  margin-top: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-align: right;
 }
 
 .form-actions {
